@@ -1,39 +1,90 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth, Role } from '../../context/AuthContext';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 
 export default function Login() {
   const { login } = useAuth();
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleMockLogin = (role: Role) => {
+    login(role);
+  };
 
   return (
-    <View className="flex-1 items-center justify-center p-6 bg-slate-50">
-      <View className="items-center mb-10">
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-slate-50 p-6 pt-12">
+      <View className="items-center mb-8 mt-4">
         <Text className="text-4xl font-bold text-primary mb-2">CoolTrack-Pro</Text>
-        <Text className="text-base text-secondary text-center">Selecciona un rol para simular el inicio de sesión estructurado</Text>
+        <Text className="text-base text-secondary text-center">Gestión Profesional HVAC</Text>
       </View>
 
-      <View className="w-full max-w-sm gap-4">
-        <TouchableOpacity 
-          className="bg-primary py-4 rounded-xl items-center shadow-sm"
-          onPress={() => login('CLIENT')}
-        >
-          <Text className="text-white font-semibold text-lg">Entrar como Cliente</Text>
-        </TouchableOpacity>
+      <View className="w-full bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-8">
+        <Text className="text-xl font-bold text-slate-800 mb-6">Iniciar Sesión</Text>
+        
+        <Input 
+          label="Correo Electrónico" 
+          placeholder="ejemplo@correo.com" 
+          keyboardType="email-address" 
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
+        
+        <Input 
+          label="Contraseña" 
+          placeholder="••••••••" 
+          secureTextEntry 
+          value={password}
+          onChangeText={setPassword}
+        />
 
-        <TouchableOpacity 
-          className="bg-primary-light py-4 rounded-xl items-center shadow-sm"
-          onPress={() => login('TECHNICIAN')}
-        >
-          <Text className="text-white font-semibold text-lg">Entrar como Técnico</Text>
-        </TouchableOpacity>
+        <View className="items-end mb-6">
+          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
+            <Text className="text-primary font-medium">¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity 
-          className="bg-slate-800 py-4 rounded-xl items-center shadow-sm"
-          onPress={() => login('ADMIN')}
-        >
-          <Text className="text-white font-semibold text-lg">Panel Administrador</Text>
+        {/* Mocking Panel para pruebas */}
+        <Text className="text-slate-400 text-xs text-center mb-2 uppercase tracking-widest font-bold">Modo Prueba (Elige Rol)</Text>
+        <Button 
+          title="Entrar como Cliente" 
+          onPress={() => handleMockLogin('CLIENT')} 
+          className="mb-3" 
+        />
+        <Button 
+          title="Entrar como Técnico" 
+          variant="secondary" 
+          onPress={() => handleMockLogin('TECHNICIAN')} 
+          className="mb-3" 
+        />
+        <Button 
+          title="Entrar al Panel Admin" 
+          variant="outline" 
+          onPress={() => handleMockLogin('ADMIN')} 
+        />
+
+        <View className="flex-row items-center my-6">
+          <View className="flex-1 h-[1px] bg-slate-200" />
+          <Text className="mx-4 text-slate-400 font-medium">O</Text>
+          <View className="flex-1 h-[1px] bg-slate-200" />
+        </View>
+
+        <TouchableOpacity className="flex-row items-center justify-center bg-white border border-slate-200 py-3 rounded-xl shadow-sm">
+          <Text className="text-lg mr-2">Ⓜ️ </Text>
+          <Text className="text-slate-700 font-semibold text-lg">Continuar con Google</Text>
         </TouchableOpacity>
       </View>
-    </View>
+
+      <View className="flex-row justify-center pb-8">
+        <Text className="text-slate-600">¿No tienes una cuenta? </Text>
+        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+          <Text className="text-primary font-bold">Regístrate</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
