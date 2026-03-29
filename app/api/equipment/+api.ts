@@ -1,88 +1,51 @@
-
-import { getServerSession } from 'next-auth/next';
-import { authConfig } from '@/lib/auth-config';
 import sql from '@/lib/db';
-import type { Equipment } from '@/lib/types';
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const client_id = url.searchParams.get('client_id');
+
+  if (!client_id) {
+    return Response.json({ success: false, error: 'Client ID requerido' }, { status: 400 });
+  }
+
   try {
-    const session = await getServerSession(authConfig);
-    
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const equipments = await sql`
+      SELECT * FROM hvac_equipment 
+      WHERE client_id = ${client_id}
+      ORDER BY created_at DESC
+    `;
 
-    let query;
-
-    if (session.user.role === 'admin') {
-      query = await sql`SELECT * FROM equipment ORDER BY created_at DESC`;
-    } else {
-      // Clients only see their own equipment
-      query = await sql`
-        SELECT * FROM equipment 
-        WHERE client_id = ${session.user.id}
-        ORDER BY created_at DESC
-      `;
-    }
-
-    return Response.json({ data: query as Equipment[] });
-  } catch (error) {
-    console.error('Error fetching equipment:', error);
-    return Response.json(
-      { error: 'Failed to fetch equipment' },
-      { status: 500 }
-    );
+    return Response.json({ success: true, equipments });
+  } catch (error: any) {
+    console.error('Fetch client equipment error:', error);
+    return Response.json({ success: false, error: 'Error al obtener equipos' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authConfig);
-    
-    if (!session?.user || session.user.role !== 'client') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const { 
+      client_id, 
+      type, 
+      brand, 
+      model, 
+      serial_number, 
+      location 
+    } = await request.json();
+
+    if (!client_id || !type || !location) {
+      return Response.json({ success: false, error: 'Faltan campos obligatorios' }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { name, type, brand, model, serial_number, capacity_tons, location_description, notes } = body;
-
-    if (!name || !type) {
-      return Response.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    const result = await sql`
-      INSERT INTO equipment (
-        client_id,
-        name,
-        type,
-        brand,
-        model,
-        serial_number,
-        capacity_tons,
-        location_description,
-        notes
-      ) VALUES (
-        ${session.user.id},
-        ${name},
-        ${type},
-        ${brand || null},
-        ${model || null},
-        ${serial_number || null},
-        ${capacity_tons || null},
-        ${location_description || null},
-        ${notes || null}
-      ) RETURNING *
+    const newEquipment = await sql`
+      INSERT INTO hvac_equipment (client_id, type, brand, model, serial_number, location)
+      VALUES (${client_id}, ${type}, ${brand || null}, ${model || null}, ${serial_number || null}, ${location})
+      RETURNING *;
     `;
 
-    return Response.json({ data: result[0] as Equipment });
-  } catch (error) {
-    console.error('Error creating equipment:', error);
-    return Response.json(
-      { error: 'Failed to create equipment' },
-      { status: 500 }
-    );
+    return Response.json({ success: true, equipment: newEquipment[0] });
+  } catch (error: any) {
+    console.error('Create equipment error:', error);
+    return Response.json({ success: false, error: 'Error al registrar equipo' }, { status: 500 });
   }
 }

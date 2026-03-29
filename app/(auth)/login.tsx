@@ -6,13 +6,13 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleMockLogin = (role: Role) => {
-    login(role);
+  const handleRealLogin = () => {
+    login(email, password);
   };
 
   return (
@@ -48,23 +48,11 @@ export default function Login() {
           </TouchableOpacity>
         </View>
 
-        {/* Mocking Panel para pruebas */}
-        <Text className="text-slate-400 text-xs text-center mb-2 uppercase tracking-widest font-bold">Modo Prueba (Elige Rol)</Text>
         <Button 
-          title="Entrar como Cliente" 
-          onPress={() => handleMockLogin('CLIENT')} 
-          className="mb-3" 
-        />
-        <Button 
-          title="Entrar como Técnico" 
-          variant="secondary" 
-          onPress={() => handleMockLogin('TECHNICIAN')} 
-          className="mb-3" 
-        />
-        <Button 
-          title="Entrar al Panel Admin" 
-          variant="outline" 
-          onPress={() => handleMockLogin('ADMIN')} 
+          title={loading ? "Entrando..." : "Entrar"} 
+          onPress={handleRealLogin} 
+          disabled={loading}
+          className="mb-3"
         />
 
         <View className="flex-row items-center my-6">
@@ -73,7 +61,7 @@ export default function Login() {
           <View className="flex-1 h-[1px] bg-slate-200" />
         </View>
 
-        <TouchableOpacity className="flex-row items-center justify-center bg-white border border-slate-200 py-3 rounded-xl shadow-sm">
+        <TouchableOpacity className="flex-row items-center justify-center bg-white border border-slate-200 py-3 rounded-xl shadow-sm mb-4">
           <Text className="text-lg mr-2">Ⓜ️ </Text>
           <Text className="text-slate-700 font-semibold text-lg">Continuar con Google</Text>
         </TouchableOpacity>

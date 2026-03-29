@@ -1,151 +1,84 @@
+import sql from '@/lib/db';
 
-import { getServerSession } from 'next-auth/next'
-import { authConfig } from '@/lib/auth-config'
-import sql from '@/lib/db'
-
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, context: any) {
   try {
-    const session = await getServerSession(authConfig)
+    const id = context?.params?.id || new URL(request.url).pathname.split('/').pop();
 
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!id) {
+       return Response.json({ success: false, error: 'ID no proporcionado' }, { status: 400 });
     }
 
-    const orderId = params.id
+    const order = await sql`
+      SELECT o.*, u.name as client_name, u.phone as client_phone, t.name as technician_name 
+      FROM service_orders o
+      JOIN users u ON o.client_id = u.id
+      LEFT JOIN users t ON o.technician_id = t.id
+      WHERE o.id = ${id}
+    `;
 
-    let query
-    if (session.user.role === 'admin') {
-      query = await sql`
-        SELECT o.*, 
-               c.name as client_name,
-               c.email as client_email,
-               t.name as technician_name,
-               t.phone as technician_phone,
-               e.name as equipment_name
-        FROM service_orders o
-        LEFT JOIN users c ON o.client_id = c.id
-        LEFT JOIN users t ON o.technician_id = t.id
-        LEFT JOIN equipment e ON o.equipment_id = e.id
-        WHERE o.id = ${orderId}
-      `
-    } else if (session.user.role === 'technician') {
-      query = await sql`
-        SELECT o.*, 
-               c.name as client_name,
-               c.email as client_email,
-               t.name as technician_name,
-               t.phone as technician_phone,
-               e.name as equipment_name
-        FROM service_orders o
-        LEFT JOIN users c ON o.client_id = c.id
-        LEFT JOIN users t ON o.technician_id = t.id
-        LEFT JOIN equipment e ON o.equipment_id = e.id
-        WHERE o.id = ${orderId} AND o.technician_id = ${session.user.id}
-      `
-    } else {
-      // Client
-      query = await sql`
-        SELECT o.*, 
-               c.name as client_name,
-               c.email as client_email,
-               t.name as technician_name,
-               t.phone as technician_phone,
-               e.name as equipment_name
-        FROM service_orders o
-        LEFT JOIN users c ON o.client_id = c.id
-        LEFT JOIN users t ON o.technician_id = t.id
-        LEFT JOIN equipment e ON o.equipment_id = e.id
-        WHERE o.id = ${orderId} AND o.client_id = ${session.user.id}
-      `
+    if (order.length === 0) {
+      return Response.json({ success: false, error: 'Orden no encontrada' }, { status: 404 });
     }
 
-    if (!query || query.length === 0) {
-      return Response.json(
-        { error: 'Order not found or unauthorized' },
-        { status: 404 }
-      )
-    }
+    // Obtener media asociada (fotos)
+    const media = await sql`
+      SELECT url, context FROM media 
+      WHERE (uploaded_by = ${order[0].client_id} OR uploaded_by = ${order[0].technician_id})
+      AND context IN ('service_order', 'document')
+      ORDER BY created_at DESC
+    `;
 
-    return Response.json({ data: query[0] })
-  } catch (error) {
-    console.error('Error fetching order:', error)
-    return Response.json(
-      { error: 'Failed to fetch order' },
-      { status: 500 }
-    )
+    return Response.json({ success: true, order: order[0], media });
+  } catch (error: any) {
+    console.error('Fetch order detail error:', error);
+    return Response.json({ success: false, error: 'Error al obtener detalle' }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, context: any) {
   try {
-    const session = await getServerSession(authConfig)
+    // 1. Extracción segura del ID (ignorando query params)
+    const url = new URL(request.url);
+    const idFromPath = url.pathname.split('/').filter(Boolean).pop();
+    const id = (context?.params?.id || idFromPath || "").trim();
 
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    // 2. Validación de cuerpo JSON
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return Response.json({ success: false, error: 'Cuerpo de petición inválido (No es JSON)' }, { status: 400 });
     }
 
-    const orderId = params.id
-    const body = await request.json()
-
-    // Only allow clients to update rating and feedback
-    if (session.user.role === 'client') {
-      const { client_rating, client_feedback } = body
-
-      const result = await sql`
-        UPDATE service_orders
-        SET client_rating = ${client_rating || null},
-            client_feedback = ${client_feedback || null},
-            updated_at = NOW()
-        WHERE id = ${orderId} AND client_id = ${session.user.id}
-        RETURNING *
-      `
-
-      if (!result || result.length === 0) {
-        return Response.json(
-          { error: 'Order not found or unauthorized' },
-          { status: 404 }
-        )
-      }
-
-      return Response.json({ data: result[0] })
+    const { status, notes } = body;
+    if (!status) {
+      return Response.json({ success: false, error: 'El campo "status" es obligatorio' }, { status: 400 });
     }
 
-    // Admin and technician can update status and other fields
-    if (session.user.role === 'admin' || session.user.role === 'technician') {
-      const { status, technician_notes, total_amount } = body
+    console.log(`[API] Intentando actualizar orden ${id} a estado: ${status}`);
 
-      const result = await sql`
-        UPDATE service_orders
-        SET status = ${status || null},
-            technician_notes = ${technician_notes || null},
-            total_amount = ${total_amount || null},
-            updated_at = NOW()
-        WHERE id = ${orderId}
-        RETURNING *
-      `
+    // 3. Actualización con casting de seguridad
+    const updated = await sql`
+      UPDATE service_orders 
+      SET status = ${status}::order_status, 
+          technician_notes = ${notes || null},
+          updated_at = NOW()
+      WHERE id = ${id}::uuid
+      RETURNING *;
+    `;
 
-      if (!result || result.length === 0) {
-        return Response.json(
-          { error: 'Order not found' },
-          { status: 404 }
-        )
-      }
-
-      return Response.json({ data: result[0] })
+    if (!updated || updated.length === 0) {
+      return Response.json({ success: false, error: 'No se encontró la orden técnica con ese ID' }, { status: 404 });
     }
 
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  } catch (error) {
-    console.error('Error updating order:', error)
-    return Response.json(
-      { error: 'Failed to update order' },
-      { status: 500 }
-    )
+    return Response.json({ success: true, order: updated[0] });
+  } catch (error: any) {
+    console.error('CRITICAL DATABASE ERROR:', error);
+    return Response.json({ 
+      success: false, 
+      error: 'Fallo crítico en la actualización de la base de datos.',
+      message: error.message,
+      code: error.code // Ej: 42703 para columna inexistente
+    }, { status: 500 });
   }
 }
