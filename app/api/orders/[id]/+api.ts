@@ -9,7 +9,8 @@ export async function GET(request: Request, context: any) {
     }
 
     const order = await sql`
-      SELECT o.*, u.name as client_name, u.phone as client_phone, t.name as technician_name 
+      SELECT o.*, u.name as client_name, u.phone as client_phone, u.address as client_address,
+             t.name as technician_name 
       FROM service_orders o
       JOIN users u ON o.client_id = u.id
       LEFT JOIN users t ON o.technician_id = t.id
@@ -20,14 +21,23 @@ export async function GET(request: Request, context: any) {
       return Response.json({ success: false, error: 'Orden no encontrada' }, { status: 404 });
     }
 
-    // Obtener media asociada (fotos)
+    let equipment = null;
+    if (order[0].equipment_id) {
+      const eqResult = await sql`
+        SELECT * FROM equipment WHERE id = ${order[0].equipment_id}
+      `;
+      if (eqResult.length > 0) {
+        equipment = eqResult[0];
+      }
+    }
+
     const media = await sql`
       SELECT url, context, caption FROM media 
       WHERE order_id = ${id}
       ORDER BY created_at DESC
     `;
 
-    return Response.json({ success: true, order: order[0], media });
+    return Response.json({ success: true, order: order[0], media, equipment });
   } catch (error: any) {
     console.error('Fetch order detail error:', error);
     return Response.json({ success: false, error: 'Error al obtener detalle' }, { status: 500 });

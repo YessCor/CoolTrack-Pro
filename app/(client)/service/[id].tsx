@@ -5,13 +5,23 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../../../context/AuthContext';
 import { apiCall } from '../../../lib/api';
-import { MapPinIcon, UserIcon, CalendarIcon, FileTextIcon, AirVentIcon, ChevronRightIcon } from '../../../components/ui/Icons';
+import { MapPinIcon, UserIcon, CalendarIcon, FileTextIcon, AirVentIcon, ChevronRightIcon, LayersIcon, TagIcon } from '../../../components/ui/Icons';
+
+const EQUIPMENT_TYPES: Record<string, string> = {
+  split: 'Aire de ventana',
+  central: 'Sistema Central',
+  mini_split: 'Minisplit',
+  chiller: 'Chiller',
+  fan_coil: 'Fan Coil',
+  other: 'Otro',
+};
 
 export default function ServiceDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   const [order, setOrder] = useState<any>(null);
+  const [equipment, setEquipment] = useState<any>(null);
   const [media, setMedia] = useState<any[]>([]);
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,9 +29,10 @@ export default function ServiceDetail() {
   useEffect(() => {
     const load = async () => {
       try {
-        const orderRes = await apiCall<{ order: any; media: any[] }>(`/api/orders/${id}?user_id=${user?.id}&role=${user?.role}`);
+        const orderRes = await apiCall<{ order: any; media: any[]; equipment: any }>(`/api/orders/${id}?user_id=${user?.id}&role=${user?.role}`);
         if (orderRes.success && orderRes.data) {
           setOrder(orderRes.data.order);
+          setEquipment(orderRes.data.equipment || null);
           setMedia(orderRes.data.media || []);
           const quoteRes = await apiCall<{ data: any[] }>(`/api/quotes?user_id=${user?.id}&role=${user?.role}`);
           if (quoteRes.success && quoteRes.data) {
@@ -75,6 +86,41 @@ export default function ServiceDetail() {
           </View>
           <Text style={{ color: '#64748b', fontSize: 14, lineHeight: 21 }}>{order.description}</Text>
         </View>
+
+        {/* Equipment info */}
+        {equipment && (
+          <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+            <View className="px-4 py-3 border-b border-surface-border flex-row items-center gap-2">
+              <AirVentIcon size={16} color="#0F4C75" />
+              <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 14 }}>Equipo seleccionado</Text>
+            </View>
+            <View className="p-4">
+              <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 15 }}>
+                {equipment.name || EQUIPMENT_TYPES[equipment.type] || equipment.type}
+              </Text>
+              <View className="flex-row flex-wrap gap-x-4 mt-2">
+                {equipment.brand && (
+                  <View className="flex-row items-center gap-1.5">
+                    <LayersIcon size={13} color="#64748b" />
+                    <Text style={{ color: '#64748b', fontSize: 12 }}>{equipment.brand} {equipment.model || ''}</Text>
+                  </View>
+                )}
+                {equipment.serial_number && (
+                  <Text style={{ color: '#64748b', fontSize: 12 }}>Serie: {equipment.serial_number}</Text>
+                )}
+                {equipment.capacity_tons && (
+                  <Text style={{ color: '#64748b', fontSize: 12 }}>{equipment.capacity_tons} ton</Text>
+                )}
+              </View>
+              {equipment.location_description && (
+                <View className="flex-row items-center gap-1.5 mt-2">
+                  <MapPinIcon size={13} color="#64748b" />
+                  <Text style={{ color: '#64748b', fontSize: 12 }}>{equipment.location_description}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Details row */}
         <View className="flex-row gap-3">

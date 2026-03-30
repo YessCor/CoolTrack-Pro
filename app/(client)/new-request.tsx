@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, ActivityIndicator, Image, TouchableOpacity, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Alert, ActivityIndicator, Image, TouchableOpacity, StatusBar, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { uploadToCloudinary } from '../../services/cloudinary.service';
-import { CameraIcon, MapPinIcon, AirVentIcon, CheckCircleIcon } from '../../components/ui/Icons';
+import { CameraIcon, MapPinIcon, AirVentIcon, CheckCircleIcon, ChevronDownIcon, XIcon } from '../../components/ui/Icons';
 
 const SERVICE_TYPES = [
   'Mantenimiento Correctivo',
@@ -15,6 +15,15 @@ const SERVICE_TYPES = [
   'Diagnóstico',
   'Recarga de Gas',
 ];
+
+const EQUIPMENT_TYPES: Record<string, string> = {
+  split: 'Aire de ventana',
+  central: 'Sistema Central',
+  mini_split: 'Minisplit',
+  chiller: 'Chiller',
+  fan_coil: 'Fan Coil',
+  other: 'Otro',
+};
 
 const PRIORITIES = [
   { key: 'low',    label: 'Baja',   color: '#10B981', bg: '#ECFDF5' },
@@ -28,12 +37,27 @@ export default function NewRequestScreen() {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [equipments, setEquipments] = useState<any[]>([]);
+  const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] = useState<any>(null);
   const [form, setForm] = useState({
     description: '',
     address: '',
     service_type: 'Mantenimiento Correctivo',
     priority: 'medium',
   });
+
+  useEffect(() => {
+    const fetchEquipments = async () => {
+      if (!user?.id || user.id === 'mock') return;
+      try {
+        const res = await fetch(`/api/equipment?client_id=${user.id}`);
+        const data = await res.json();
+        if (data.success) setEquipments(data.equipments);
+      } catch (e) { console.error(e); }
+    };
+    fetchEquipments();
+  }, [user?.id]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -59,7 +83,11 @@ export default function NewRequestScreen() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: user?.id, ...form }),
+        body: JSON.stringify({ 
+          client_id: user?.id, 
+          equipment_id: selectedEquipment?.id || null,
+          ...form 
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -77,8 +105,9 @@ export default function NewRequestScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-      <StatusBar barStyle="light-content" backgroundColor="#0D1B2A" />
+    <>
+      <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        <StatusBar barStyle="light-content" backgroundColor="#0D1B2A" />
 
       {/* Service type selector */}
       <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b', letterSpacing: 1, marginBottom: 10, textTransform: 'uppercase' }}>
@@ -107,6 +136,44 @@ export default function NewRequestScreen() {
           })}
         </View>
       </ScrollView>
+
+      {/* Equipment selector */}
+      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b', letterSpacing: 1, marginBottom: 10, textTransform: 'uppercase' }}>
+        Equipo a reparar
+      </Text>
+      <TouchableOpacity
+        onPress={() => setShowEquipmentPicker(true)}
+        className="rounded-xl border border-surface-border overflow-hidden mb-5"
+        style={{ backgroundColor: '#FFFFFF' }}
+      >
+        <View className="px-4 py-4 flex-row items-center justify-between">
+          <View className="flex-row items-center gap-3 flex-1">
+            {selectedEquipment ? (
+              <>
+                <View className="w-9 h-9 rounded-lg bg-brand/10 items-center justify-center">
+                  <AirVentIcon size={16} color="#0F4C75" />
+                </View>
+                <View className="flex-1">
+                  <Text style={{ fontWeight: '600', color: '#0D1B2A', fontSize: 14 }}>
+                    {selectedEquipment.name || EQUIPMENT_TYPES[selectedEquipment.type] || selectedEquipment.type}
+                  </Text>
+                  <Text style={{ color: '#64748b', fontSize: 12 }}>
+                    {selectedEquipment.brand} {selectedEquipment.model ? `· ${selectedEquipment.model}` : ''}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View className="w-9 h-9 rounded-lg bg-surface-hover items-center justify-center">
+                  <AirVentIcon size={16} color="#94a3b8" />
+                </View>
+                <Text style={{ color: '#94a3b8', fontSize: 14 }}>Seleccionar equipo (opcional)</Text>
+              </>
+            )}
+          </View>
+          <ChevronDownIcon size={18} color="#94a3b8" />
+        </View>
+      </TouchableOpacity>
 
       {/* Main form */}
       <View className="bg-surface-card rounded-2xl border border-surface-border p-5 gap-0">
@@ -188,5 +255,73 @@ export default function NewRequestScreen() {
       />
       <Button title="Cancelar" variant="outline" onPress={() => router.back()} disabled={loading} className="w-full" />
     </ScrollView>
+
+    {/* Equipment Picker Modal */}
+    <Modal visible={showEquipmentPicker} animationType="slide" transparent>
+      <View className="flex-1 bg-black/50 justify-end">
+        <View className="bg-white rounded-t-3xl" style={{ maxHeight: '70%' }}>
+          <View className="px-5 py-4 border-b border-surface-border flex-row items-center justify-between">
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#0D1B2A' }}>Seleccionar Equipo</Text>
+            <TouchableOpacity onPress={() => setShowEquipmentPicker(false)} className="p-2">
+              <XIcon size={20} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView className="p-4" contentContainerStyle={{ gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedEquipment(null);
+                setShowEquipmentPicker(false);
+              }}
+              className="flex-row items-center gap-3 p-4 rounded-xl border"
+              style={{ 
+                borderColor: selectedEquipment === null ? '#0F4C75' : '#E2E8F0',
+                backgroundColor: selectedEquipment === null ? '#E8F4FD' : '#FFFFFF'
+              }}
+            >
+              <View className="w-10 h-10 rounded-lg bg-surface-hover items-center justify-center">
+                <AirVentIcon size={18} color="#94a3b8" />
+              </View>
+              <View className="flex-1">
+                <Text style={{ fontWeight: '600', color: '#0D1B2A', fontSize: 14 }}>Otro equipo</Text>
+                <Text style={{ color: '#64748b', fontSize: 12 }}>No appears in my list</Text>
+              </View>
+              {selectedEquipment === null && <CheckCircleIcon size={18} color="#0F4C75" />}
+            </TouchableOpacity>
+
+            {equipments.map((eq) => {
+              const isSelected = selectedEquipment?.id === eq.id;
+              return (
+                <TouchableOpacity
+                  key={eq.id}
+                  onPress={() => {
+                    setSelectedEquipment(eq);
+                    setShowEquipmentPicker(false);
+                  }}
+                  className="flex-row items-center gap-3 p-4 rounded-xl border"
+                  style={{ 
+                    borderColor: isSelected ? '#0F4C75' : '#E2E8F0',
+                    backgroundColor: isSelected ? '#E8F4FD' : '#FFFFFF'
+                  }}
+                >
+                  <View className="w-10 h-10 rounded-lg bg-brand/10 items-center justify-center">
+                    <AirVentIcon size={18} color="#0F4C75" />
+                  </View>
+                  <View className="flex-1">
+                    <Text style={{ fontWeight: '600', color: '#0D1B2A', fontSize: 14 }}>
+                      {eq.name || EQUIPMENT_TYPES[eq.type] || eq.type}
+                    </Text>
+                    <Text style={{ color: '#64748b', fontSize: 12 }}>
+                      {eq.brand || 'N/A'} {eq.model ? `· ${eq.model}` : ''} · {eq.location_description}
+                    </Text>
+                  </View>
+                  {isSelected && <CheckCircleIcon size={18} color="#0F4C75" />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }

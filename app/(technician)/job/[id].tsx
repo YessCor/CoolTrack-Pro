@@ -8,7 +8,17 @@ import { ORDER_STATUS, TECHNICIAN_NEXT_STATUS, ORDER_STATUS_LABEL, OrderStatus }
 import {
   MapPinIcon, UserIcon, FileTextIcon, ClipboardIcon,
   CheckCircleIcon, AlertTriangleIcon, ChevronRightIcon, MapPinIcon as NavIcon,
+  AirVentIcon, LayersIcon, TagIcon,
 } from '../../../components/ui/Icons';
+
+const EQUIPMENT_TYPES: Record<string, string> = {
+  split: 'Aire de ventana',
+  central: 'Sistema Central',
+  mini_split: 'Minisplit',
+  chiller: 'Chiller',
+  fan_coil: 'Fan Coil',
+  other: 'Otro',
+};
 
 const STEP_CONFIG: Partial<Record<OrderStatus, { label: string; sub: string }>> = {
   assigned:    { label: 'Aceptar trabajo',         sub: 'Confirma que tomaste este servicio.' },
@@ -22,6 +32,7 @@ export default function JobDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const [order, setOrder] = useState<any>(null);
+  const [equipment, setEquipment] = useState<any>(null);
   const [quoteStatus, setQuoteStatus] = useState<string | null>(null);
   const [quoteId, setQuoteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +45,15 @@ export default function JobDetail() {
       const dataOrder = await resOrder.json();
       if (dataOrder.success) {
         setOrder(dataOrder.order);
+        
+        if (dataOrder.order.equipment_id) {
+          const resEquipment = await fetch(`/api/equipment/${dataOrder.order.equipment_id}`);
+          const dataEquipment = await resEquipment.json();
+          if (dataEquipment.success) {
+            setEquipment(dataEquipment.equipment);
+          }
+        }
+        
         const resQuote = await fetch(`/api/quotes?user_id=${user.id}&role=${user.role}`);
         const dataQuote = await resQuote.json();
         if (dataQuote.success) {
@@ -144,6 +164,50 @@ export default function JobDetail() {
             <MapPinIcon size={15} color="#94a3b8" />
             <Text style={{ color: '#64748b', fontSize: 13, flex: 1 }}>{order.address}</Text>
           </View>
+          {equipment && (
+            <View className="px-4 py-3 border-t border-surface-border">
+              <View className="flex-row items-center gap-2 mb-2">
+                <AirVentIcon size={14} color="#0F4C75" />
+                <Text style={{ fontWeight: '700', color: '#0F4C75', fontSize: 12 }}>EQUIPO ASIGNADO</Text>
+              </View>
+              <View className="bg-surface-hover rounded-lg p-3">
+                <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 14 }}>
+                  {equipment.name || EQUIPMENT_TYPES[equipment.type] || equipment.type}
+                </Text>
+                <View className="flex-row flex-wrap gap-x-4 mt-2">
+                  {equipment.brand && (
+                    <View className="flex-row items-center gap-1">
+                      <LayersIcon size={12} color="#64748b" />
+                      <Text style={{ color: '#64748b', fontSize: 12 }}>{equipment.brand}</Text>
+                    </View>
+                  )}
+                  {equipment.model && (
+                    <View className="flex-row items-center gap-1">
+                      <TagIcon size={12} color="#64748b" />
+                      <Text style={{ color: '#64748b', fontSize: 12 }}>{equipment.model}</Text>
+                    </View>
+                  )}
+                  {equipment.serial_number && (
+                    <Text style={{ color: '#64748b', fontSize: 12 }}>Serie: {equipment.serial_number}</Text>
+                  )}
+                  {equipment.capacity_tons && (
+                    <Text style={{ color: '#64748b', fontSize: 12 }}>{equipment.capacity_tons} ton</Text>
+                  )}
+                </View>
+                {equipment.location_description && (
+                  <View className="flex-row items-center gap-1 mt-2">
+                    <MapPinIcon size={12} color="#64748b" />
+                    <Text style={{ color: '#64748b', fontSize: 12 }}>{equipment.location_description}</Text>
+                  </View>
+                )}
+                {equipment.notes && (
+                  <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4, fontStyle: 'italic' }}>
+                    Nota: {equipment.notes}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
           {/* Map placeholder */}
           <View style={{ height: 120, margin: 12, borderRadius: 12, backgroundColor: '#EEF2F7', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <NavIcon size={20} color="#94a3b8" />

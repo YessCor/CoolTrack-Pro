@@ -12,17 +12,27 @@ export async function GET(request: Request) {
     }
 
     const clients = await sql`
-      SELECT id, email, name, phone, address, is_active, created_at
-      FROM users
-      WHERE role = 'client'
-      ORDER BY created_at DESC
+      SELECT 
+        u.id, u.email, u.name, u.phone, u.address, u.is_active, u.created_at,
+        COUNT(e.id) as equipment_count,
+        COALESCE(
+          (SELECT json_agg(DISTINCT eq.type) FROM equipment eq WHERE eq.client_id = u.id),
+          '[]'::json
+        ) as equipment_types,
+        COUNT(CASE WHEN o.status IN ('pending', 'assigned', 'accepted', 'in_transit', 'in_progress') THEN 1 END) as pending_orders
+      FROM users u
+      LEFT JOIN equipment e ON u.id = e.client_id
+      LEFT JOIN service_orders o ON u.id = o.client_id
+      WHERE u.role = 'client'
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
     `
 
-    return Response.json({ data: clients })
+    return Response.json({ success: true, clients })
   } catch (error) {
     console.error('Error fetching clients:', error)
     return Response.json(
-      { error: 'Failed to fetch clients' },
+      { success: false, error: 'Failed to fetch clients' },
       { status: 500 }
     )
   }
