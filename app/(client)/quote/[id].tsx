@@ -81,7 +81,7 @@ export default function QuoteDetailClient() {
     <ScrollView className="flex-1 bg-slate-50 p-4">
       <View className="flex-row justify-between items-center mb-6 mt-4">
         <View className="flex-1 mr-2">
-          <Text className="text-2xl font-bold text-slate-800">Cotización #{quote.quote_number}</Text>
+          <Text className="text-2xl font-bold text-slate-800">Cotización #{quote.display_quote_number}</Text>
           <Text className="text-slate-500">Técnico: {quote.technician_name}</Text>
         </View>
         <StatusBadge status={quote.status} />

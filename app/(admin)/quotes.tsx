@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Card } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useAuth } from '../../context/AuthContext';
@@ -85,7 +85,7 @@ export default function AdminQuotes() {
             <Card className="mb-4">
               <View className="flex-row justify-between items-start mb-3">
                 <View>
-                  <Text className="text-lg font-bold text-slate-800">{item.quote_number}</Text>
+                  <Text className="text-lg font-bold text-slate-800">{item.display_quote_number}</Text>
                   <Text className="text-slate-400 text-xs">#{item.id.slice(0,8)}</Text>
                 </View>
                 <StatusBadge status={item.status} />

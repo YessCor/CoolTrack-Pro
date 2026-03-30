@@ -1,9 +1,10 @@
-import sql from '@/lib/db';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api';
+import sql from '@/lib/db';
 import { enhanceQuote } from '@/lib/quote-utils';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const url = new URL(request.url);
     const user_id = url.searchParams.get('user_id');
     const role = url.searchParams.get('role');
@@ -19,19 +20,29 @@ export async function GET(request: Request, { params }: { params: { id: string }
       FROM quotes q
       JOIN users u_client ON q.client_id = u_client.id
       LEFT JOIN users u_tech ON q.technician_id = u_tech.id
-      WHERE q.id = ${params.id}::uuid
+      WHERE q.id = ${id}::uuid
     `;
 
     if (quoteResult.length === 0) {
       return createErrorResponse('Cotización no encontrada', 404);
     }
 
+    const quote = quoteResult[0];
+
+    // Validar permisos: cliente solo ve sus cotizaciones, técnico solo las suyas, admin ve todas
+    if (role === 'client' && quote.client_id !== user_id) {
+      return createErrorResponse('No tienes permiso para ver esta cotización', 403);
+    }
+    if (role === 'technician' && quote.technician_id !== user_id) {
+      return createErrorResponse('No tienes permiso para ver esta cotización', 403);
+    }
+
     const items = await sql`
-      SELECT * FROM quote_items WHERE quote_id = ${params.id}::uuid ORDER BY created_at ASC
+      SELECT * FROM quote_items WHERE quote_id = ${id}::uuid ORDER BY created_at ASC
     `;
 
     // IMMUTABLE ENHANCEMENT
-    const enhancedQuote = enhanceQuote(quoteResult[0] as any);
+    const enhancedQuote = enhanceQuote(quote as any);
 
     return createSuccessResponse({ quote: enhancedQuote, items });
   } catch (error: any) {
@@ -40,8 +51,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const url = new URL(request.url);
     const user_id = url.searchParams.get('user_id');
     const role = url.searchParams.get('role');
@@ -60,7 +72,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const updated = await sql`
       UPDATE quotes 
       SET status = ${status}, updated_at = NOW()
-      WHERE id = ${params.id}::uuid
+      WHERE id = ${id}::uuid
       RETURNING *;
     `;
 

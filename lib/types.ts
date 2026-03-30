@@ -90,7 +90,8 @@ export interface QuoteItem {
 
 export interface Quote {
   id: string;
-  quote_number: string;
+  quote_number: number;
+  display_quote_number?: string;
   order_id?: string;
   client_id: string;
   technician_id?: string;

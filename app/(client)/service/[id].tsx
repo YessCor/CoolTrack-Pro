@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Image, Alert, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '../../../context/AuthContext';
-import { apiCall } from '../../../lib/api';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
-import { Button } from '../../../components/ui/Button';
-import { ORDER_STATUS_LABEL, ORDER_STATUS } from '../../../lib/order-status';
+import { useAuth } from '../../../context/AuthContext';
+import { apiCall } from '../../../lib/api';
 
 export default function ServiceDetail() {
   const { id } = useLocalSearchParams();
@@ -101,7 +100,7 @@ export default function ServiceDetail() {
               >
                 <Card className="flex-row justify-between items-center border-l-4 border-yellow-500">
                   <View>
-                    <Text className="font-bold text-slate-800">{quote.quote_number}</Text>
+                    <Text className="font-bold text-slate-800">{quote.display_quote_number}</Text>
                     <Text className="text-primary font-bold text-lg">${Number(quote.total).toFixed(2)}</Text>
                   </View>
                   <View className="items-end">
