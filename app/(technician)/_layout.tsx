@@ -3,6 +3,21 @@ import { useAuth } from '../../context/AuthContext';
 import { TouchableOpacity, View, Text, Platform } from 'react-native';
 import { ClipboardIcon, UserIcon, LogOutIcon, AirVentIcon } from '../../components/ui/Icons';
 
+function TabIcon({ icon, focused }: { icon: React.ReactNode; focused: boolean }) {
+  return (
+    <View style={{
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      backgroundColor: focused ? '#0F4C75' : 'transparent',
+    }}>
+      {icon}
+    </View>
+  );
+}
+
 export default function TechnicianLayout() {
   const { logout } = useAuth();
 
@@ -26,7 +41,7 @@ export default function TechnicianLayout() {
         tabBarInactiveTintColor: '#4A6785',
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.5, marginTop: 2 },
         headerLeft: () => (
-          <View className="flex-row items-center ml-4 gap-2">
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 8 }}>
             <AirVentIcon size={20} color="#00B4D8" />
             <Text style={{ color: '#00B4D8', fontWeight: '800', fontSize: 14, letterSpacing: 1 }}>
               COOLTRACK
@@ -36,7 +51,7 @@ export default function TechnicianLayout() {
         headerRight: () => (
           <TouchableOpacity
             onPress={logout}
-            className="mr-4"
+            style={{ marginRight: 16 }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <LogOutIcon size={18} color="#EF4444" />
@@ -50,9 +65,7 @@ export default function TechnicianLayout() {
           title: 'Trabajos',
           headerTitle: 'Agenda del Día',
           tabBarIcon: ({ focused }) => (
-            <View className={`items-center justify-center w-12 h-12 rounded-2xl ${focused ? 'bg-brand' : ''}`}>
-              <ClipboardIcon size={20} color={focused ? '#fff' : '#4A6785'} />
-            </View>
+            <TabIcon focused={focused} icon={<ClipboardIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />
           ),
         }}
       />
@@ -62,12 +75,13 @@ export default function TechnicianLayout() {
           title: 'Perfil',
           headerTitle: 'Mi Perfil',
           tabBarIcon: ({ focused }) => (
-            <View className={`items-center justify-center w-12 h-12 rounded-2xl ${focused ? 'bg-brand' : ''}`}>
-              <UserIcon size={20} color={focused ? '#fff' : '#4A6785'} />
-            </View>
+            <TabIcon focused={focused} icon={<UserIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />
           ),
         }}
       />
+      <Tabs.Screen name="create-quote" options={{ href: null }} />
+      <Tabs.Screen name="job" options={{ href: null }} />
     </Tabs>
   );
 }
+

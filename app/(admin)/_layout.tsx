@@ -8,7 +8,14 @@ import {
 
 function TabIcon({ icon, focused }: { icon: React.ReactNode; focused: boolean }) {
   return (
-    <View className={`items-center justify-center w-12 h-12 rounded-2xl ${focused ? 'bg-brand' : 'bg-transparent'}`}>
+    <View style={{
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      backgroundColor: focused ? '#0F4C75' : 'transparent',
+    }}>
       {icon}
     </View>
   );
@@ -82,6 +89,12 @@ export default function AdminLayout() {
         options={{
           title: 'Clientes', headerTitle: 'Base de Clientes',
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={<UsersIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />,
+        }}
+      />
+      <Tabs.Screen
+        name="create-technician"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
