@@ -1,5 +1,6 @@
 import sql from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { ORDER_STATUS } from '@/lib/order-status';
 
 export async function POST(request: Request) {
   try {
@@ -63,7 +64,7 @@ export async function PATCH(request: Request) {
     const updatedOrder = await sql`
       UPDATE service_orders 
       SET technician_id = ${technician_id}, 
-          status = 'assigned', 
+          status = ${ORDER_STATUS.ASSIGNED}::order_status, 
           updated_at = NOW()
       WHERE id = ${order_id}
       RETURNING *;

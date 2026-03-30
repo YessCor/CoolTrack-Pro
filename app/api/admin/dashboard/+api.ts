@@ -11,7 +11,7 @@ export async function GET() {
 
     const stats = await Promise.all([
       sql`SELECT COUNT(*) as count FROM service_orders`,
-      sql`SELECT COUNT(*) as count FROM service_orders WHERE status IN ('in_progress', 'in_transit', 'assigned')`,
+      sql`SELECT COUNT(*) as count FROM service_orders WHERE status IN ('assigned', 'accepted', 'in_transit', 'in_progress')`,
       sql`SELECT COUNT(*) as count FROM service_orders WHERE status = 'completed'`,
       sql`SELECT COUNT(*) as count FROM quotes WHERE status = 'draft'`,
       sql`SELECT COALESCE(SUM(total_amount), 0) as total FROM service_orders WHERE status = 'completed'`,

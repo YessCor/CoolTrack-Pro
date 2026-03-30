@@ -4,17 +4,28 @@ import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
+import { ORDER_STATUS, ORDER_STATUS_LABEL, OrderStatus } from '../../lib/order-status';
 
 export default function AdminOrders() {
   const { user } = useAuth();
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState<'ALL' | OrderStatus>('ALL');
   const [orders, setOrders] = useState<any[]>([]);
   const [techs, setTechs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [showTechModal, setShowTechModal] = useState(false);
 
-  const filters = ['ALL', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+  // Filtros usando estados reales de la DB
+  const filters: Array<'ALL' | OrderStatus> = [
+    'ALL',
+    ORDER_STATUS.PENDING,
+    ORDER_STATUS.ASSIGNED,
+    ORDER_STATUS.ACCEPTED,
+    ORDER_STATUS.IN_TRANSIT,
+    ORDER_STATUS.IN_PROGRESS,
+    ORDER_STATUS.COMPLETED,
+    ORDER_STATUS.CANCELLED,
+  ];
 
   const fetchData = async () => {
     setLoading(true);
@@ -68,8 +79,8 @@ export default function AdminOrders() {
       }
     };
 
-  const filteredOrders = orders.filter(o => 
-    filter === 'ALL' || o.status.toUpperCase() === filter.toUpperCase()
+  const filteredOrders = orders.filter(o =>
+    filter === 'ALL' || o.status === filter
   );
 
   return (
@@ -85,7 +96,7 @@ export default function AdminOrders() {
               className={`px-4 py-2 rounded-full mr-2 border ${filter === f ? 'bg-primary border-primary' : 'bg-white border-slate-200'}`}
             >
               <Text className={filter === f ? 'text-white font-bold' : 'text-slate-600 font-medium'}>
-                {f}
+                {f === 'ALL' ? 'Todos' : ORDER_STATUS_LABEL[f as OrderStatus]}
               </Text>
             </TouchableOpacity>
           ))}

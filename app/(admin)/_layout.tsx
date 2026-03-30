@@ -16,6 +16,7 @@ export default function AdminLayout() {
     }}>
       <Tabs.Screen name="index" options={{ title: 'Global', headerTitle: 'Dashboard Admin' }} />
       <Tabs.Screen name="orders" options={{ title: 'Órdenes', headerTitle: 'Gestión General' }} />
+      <Tabs.Screen name="quotes" options={{ title: 'Cotizaciones', headerTitle: 'Gestión Comercial' }} />
       <Tabs.Screen name="technicians" options={{ title: 'Staff', headerTitle: 'Técnicos' }} />
       <Tabs.Screen name="clients" options={{ title: 'Clientes', headerTitle: 'Directorio Clientes' }} />
     </Tabs>

@@ -1,5 +1,6 @@
 import sql from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { ORDER_STATUS } from '@/lib/order-status';
 
 export async function GET(request: Request) {
   try {
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
         ${equipment[0].id}, 
         'Mantenimiento', 
         'El equipo enciende pero no enfría lo suficiente.', 
-        'assigned', 
+        ${ORDER_STATUS.ASSIGNED}, 
         'Calle Falsa 123, Sector Industrial'
       )
     `;

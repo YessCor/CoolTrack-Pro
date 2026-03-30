@@ -1,11 +1,11 @@
-import { OrderStatus } from '../components/ui/StatusBadge';
+import { OrderStatus, ORDER_STATUS } from '../lib/order-status';
 
 export const mockOrders = [
-  { id: '101', title: 'Mantenimiento Preventivo Mini Split', status: 'PENDING' as OrderStatus, date: '28 Oct 2026', technician: null, address: 'Av. Las Palmas 543' },
-  { id: '102', title: 'Reparación de Compresor', status: 'ON_THE_WAY' as OrderStatus, date: '28 Oct 2026', technician: 'Juan Pérez', address: 'Calle 10 #45 Sur' },
-  { id: '103', title: 'Instalación AC Central', status: 'COMPLETED' as OrderStatus, date: '25 Oct 2026', technician: 'Carlos Torres', address: 'Edificio Omega 12A' },
-  { id: '104', title: 'Evaluación Técnica de Ruido', status: 'ON_SITE' as OrderStatus, date: '29 Oct 2026', technician: 'Juan Pérez', address: 'Plaza Mayor Local 4' },
-  { id: '105', title: 'Limpieza de Filtros', status: 'INVOICED' as OrderStatus, date: '20 Oct 2026', technician: 'Carlos Torres', address: 'Residencial Los Sauces' },
+  { id: '101', title: 'Mantenimiento Preventivo Mini Split', status: ORDER_STATUS.PENDING as OrderStatus, date: '28 Oct 2026', technician: null, address: 'Av. Las Palmas 543' },
+  { id: '102', title: 'Reparación de Compresor', status: ORDER_STATUS.IN_TRANSIT as OrderStatus, date: '28 Oct 2026', technician: 'Juan Pérez', address: 'Calle 10 #45 Sur' },
+  { id: '103', title: 'Instalación AC Central', status: ORDER_STATUS.COMPLETED as OrderStatus, date: '25 Oct 2026', technician: 'Carlos Torres', address: 'Edificio Omega 12A' },
+  { id: '104', title: 'Evaluación Técnica de Ruido', status: ORDER_STATUS.IN_PROGRESS as OrderStatus, date: '29 Oct 2026', technician: 'Juan Pérez', address: 'Plaza Mayor Local 4' },
+  { id: '105', title: 'Limpieza de Filtros', status: ORDER_STATUS.COMPLETED as OrderStatus, date: '20 Oct 2026', technician: 'Carlos Torres', address: 'Residencial Los Sauces' },
 ];
 
 export const mockEquipments = [

@@ -36,8 +36,9 @@ export interface Equipment {
   updated_at: string;
 }
 
-// Service Order types
-export type OrderStatus = 'pending' | 'assigned' | 'in_transit' | 'in_progress' | 'completed' | 'cancelled';
+// Service Order types — estados sincronizados con el enum order_status de la DB
+import { OrderStatus } from './order-status';
+export type { OrderStatus };
 
 export interface ServiceOrder {
   id: string;

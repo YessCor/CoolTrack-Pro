@@ -1,25 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Image, Alert, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '../../../context/AuthContext';
+import { apiCall } from '../../../lib/api';
 import { Card } from '../../../components/ui/Card';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Button } from '../../../components/ui/Button';
+import { ORDER_STATUS_LABEL, ORDER_STATUS } from '../../../lib/order-status';
 
 export default function ServiceDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [order, setOrder] = useState<any>(null);
   const [media, setMedia] = useState<any[]>([]);
+  const [quotes, setQuotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const response = await fetch(`/api/orders/${id}`);
-        const data = await response.json();
-        if (data.success) {
-          setOrder(data.order);
-          setMedia(data.media || []);
+        const orderRes = await apiCall<{ order: any, media: any[] }>(`/api/orders/${id}?user_id=${user?.id}&role=${user?.role}`);
+        if (orderRes.success && orderRes.data) {
+          setOrder(orderRes.data.order);
+          setMedia(orderRes.data.media || []);
+          
+          // Buscar cotizaciones vinculadas a esta orden
+          const quoteRes = await apiCall<{ data: any[] }>(`/api/quotes?user_id=${user?.id}&role=${user?.role}`);
+          if (quoteRes.success && quoteRes.data) {
+            setQuotes(quoteRes.data.data.filter((q: any) => q.order_id === id));
+          }
         } else {
           Alert.alert('Error', 'No se encontró la orden.');
           router.back();
@@ -69,10 +79,41 @@ export default function ServiceDetail() {
           <Text className="text-xl">👨‍🔧</Text>
         </View>
         <View>
-          <Text className="text-lg font-bold text-slate-800">{order.technician_name || 'Pendiente de asignación'}</Text>
+          <Text className="text-lg font-bold text-slate-800">
+            {order.technician_name || 'Pendiente de asignación'}
+          </Text>
           <Text className="text-slate-500 text-sm">Staff Técnico CoolTrack-Pro</Text>
         </View>
       </Card>
+
+      {quotes.length > 0 && (
+        <>
+          <Text className="text-xl font-bold text-slate-800 mb-3">Cotizaciones Recibidas</Text>
+          <View className="mb-8">
+            {quotes.map((quote) => (
+              <TouchableOpacity 
+                key={quote.id} 
+                className="mb-3" 
+                onPress={() => router.push({
+                  pathname: '/(client)/quote/[id]',
+                  params: { id: quote.id }
+                })}
+              >
+                <Card className="flex-row justify-between items-center border-l-4 border-yellow-500">
+                  <View>
+                    <Text className="font-bold text-slate-800">{quote.quote_number}</Text>
+                    <Text className="text-primary font-bold text-lg">${Number(quote.total).toFixed(2)}</Text>
+                  </View>
+                  <View className="items-end">
+                    <StatusBadge status={quote.status} />
+                    <Text className="text-primary font-bold text-xs mt-2">VER DETALLE →</Text>
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
 
       {media.length > 0 && (
         <>

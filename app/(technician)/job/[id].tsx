@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Card } from '../../../components/ui/Card';
-import { StatusBadge, OrderStatus } from '../../../components/ui/StatusBadge';
+import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Button } from '../../../components/ui/Button';
+import { ORDER_STATUS, TECHNICIAN_NEXT_STATUS, ORDER_STATUS_LABEL, OrderStatus } from '../../../lib/order-status';
+
+// Botones y mensajes para cada paso del técnico
+const STEP_CONFIG: Partial<Record<OrderStatus, { label: string; description: string }>> = {
+  assigned:    { label: '✅ Aceptar Trabajo',          description: 'Confirma que tomaste este servicio.' },
+  accepted:    { label: '🚗 Estoy en Camino',           description: 'Informa que vas hacia el cliente.' },
+  in_transit:  { label: '📍 Llegué al Sitio',           description: 'Confirma tu llegada al lugar.' },
+  in_progress: { label: '🏁 Finalizar y Cerrar Servicio', description: 'Marca el trabajo como completado.' },
+};
 
 export default function JobDetail() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [timer, setTimer] = useState('00:00:00');
 
   const fetchOrderDetail = async () => {
     try {
@@ -20,21 +28,20 @@ export default function JobDetail() {
       if (data.success) {
         setOrder(data.order);
       } else {
-        Alert.alert('Error', 'No se pudo cargar el detalle del trabajo.');
+        Alert.alert('Error', 'No se pudo cargar el trabajo.');
         router.back();
       }
     } catch (error) {
-      console.error('Fetch order detail error:', error);
+      console.error('[JobDetail] fetch error:', error);
+      Alert.alert('Error', 'Fallo de conexión.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOrderDetail();
-  }, [id]);
+  useEffect(() => { fetchOrderDetail(); }, [id]);
 
-  const updateStatus = async (newStatus: string) => {
+  const updateStatus = async (newStatus: OrderStatus) => {
     setUpdating(true);
     try {
       const response = await fetch(`/api/orders?id=${id}`, {
@@ -43,90 +50,144 @@ export default function JobDetail() {
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await response.json();
+
       if (data.success) {
         setOrder(data.order);
-        Alert.alert('Estado Actualizado', `Ahora el servicio está en: ${newStatus}`);
+        Alert.alert('✅ Actualizado', `Estado: ${ORDER_STATUS_LABEL[newStatus]}`);
+      } else {
+        Alert.alert('Error', data.error || 'No se pudo actualizar el estado.');
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar el estado.');
+      Alert.alert('Error', 'Fallo de conexión al actualizar.');
     } finally {
       setUpdating(false);
     }
   };
 
-  if (loading) return <ActivityIndicator size="large" color="#1E40AF" className="mt-20" />;
-
-  if (!order) {
+  if (loading) {
     return (
-      <View className="flex-1 items-center justify-center p-6 bg-slate-50">
-        <Text className="text-slate-500 text-center font-medium mb-4">No se pudo encontrar la información para esta orden.</Text>
-        <Button title="Volver al Listado" onPress={() => router.back()} />
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator size="large" color="#1E40AF" />
       </View>
     );
   }
 
-  const status = (order?.status || 'PENDING').toUpperCase() as OrderStatus;
+  if (!order) {
+    return (
+      <View className="flex-1 items-center justify-center p-6 bg-slate-50">
+        <Text className="text-slate-500 text-center font-medium mb-4">
+          No se pudo encontrar esta orden.
+        </Text>
+        <Button title="Volver" onPress={() => router.back()} />
+      </View>
+    );
+  }
+
+  const currentStatus = (order.status ?? ORDER_STATUS.PENDING) as OrderStatus;
+  const nextStatus = TECHNICIAN_NEXT_STATUS[currentStatus];
+  const stepConfig = nextStatus ? STEP_CONFIG[currentStatus] : null;
 
   return (
     <ScrollView className="flex-1 bg-slate-50 p-4">
+      {/* Encabezado */}
       <View className="flex-row items-center mb-6 mt-2">
         <View className="flex-1">
           <Text className="text-2xl font-bold text-slate-800">Orden #{order.order_number}</Text>
           <Text className="text-slate-500">{order.service_type}</Text>
         </View>
-        <StatusBadge status={status} />
+        <StatusBadge status={currentStatus} />
       </View>
 
+      {/* Info cliente / dirección */}
       <Card className="mb-6">
-        <Text className="font-bold text-lg mb-2 text-slate-800">Cliente: {order.client_name}</Text>
+        <Text className="font-bold text-lg mb-2 text-slate-800">
+          Cliente: {order.client_name}
+        </Text>
         <Text className="text-slate-600 mb-3">📍 {order.address}</Text>
-        <View className="h-32 bg-slate-200 rounded-xl items-center justify-center border border-slate-300 mb-3 overflow-hidden">
-          <Text className="text-slate-500 font-medium">🗺️ Mapa de Ruta (Google Maps)</Text>
+        <View className="h-32 bg-slate-200 rounded-xl items-center justify-center border border-slate-300 mb-3">
+          <Text className="text-slate-500 font-medium">🗺️ Mapa de Ruta</Text>
         </View>
-        <Button title="Navegar (GPS)" variant="outline" onPress={() => Alert.alert('GPS', 'Abriendo Waze/Google Maps...')} />
+        <Button
+          title="Navegar (GPS)"
+          variant="outline"
+          onPress={() => Alert.alert('GPS', 'Abriendo navegación...')}
+        />
       </Card>
 
+      {/* Descripción */}
       <Text className="text-xl font-bold text-slate-800 mb-2">Descripción</Text>
       <Card className="mb-6">
         <Text className="text-slate-700 leading-relaxed">{order.description}</Text>
       </Card>
 
+      {/* Flujo de ejecución */}
       <Text className="text-xl font-bold text-slate-800 mb-3">Flujo de Ejecución</Text>
-      <Card className="mb-6 flex-col gap-3">
+      <Card className="mb-6 gap-3">
         {updating ? (
           <ActivityIndicator color="#1E40AF" />
         ) : (
           <>
-            {status === 'ASSIGNED' && (
-              <Button title="Aceptar Trabajo" onPress={() => updateStatus('accepted')} />
-            )}
-            {status === 'ACCEPTED' && (
-              <Button title="Reportar: Estoy en Camino" onPress={() => updateStatus('on_the_way')} />
-            )}
-            {status === 'ON_THE_WAY' && (
-              <Button title="Reportar: Llegué al Sitio" onPress={() => updateStatus('on_site')} />
-            )}
-            {status === 'ON_SITE' && (
-              <Button title="Iniciar Mantenimiento" onPress={() => updateStatus('in_progress')} />
-            )}
-            {status === 'IN_PROGRESS' && (
-              <>
-                <Text className="text-slate-500 mb-2 font-medium">Temporizador de Estadía: {timer}</Text>
-                <TouchableOpacity className="h-24 bg-slate-50 rounded-xl items-center justify-center border border-dashed border-slate-300 mb-2">
-                  <Text className="text-slate-400 font-medium">📷 Subir Evidencia Final</Text>
-                </TouchableOpacity>
-                <Button title="Finalizar y Cerrar Servicio" onPress={() => updateStatus('completed')} />
-              </>
-            )}
-            {status === 'COMPLETED' && (
+            {/* Estado: completado */}
+            {currentStatus === ORDER_STATUS.COMPLETED && (
               <View className="bg-green-50 p-4 rounded-xl border border-green-200">
-                <Text className="text-green-700 font-bold text-center">✅ Servicio Completado</Text>
-                <Text className="text-green-600 text-center text-xs mt-1">El cliente ya puede ver el reporte.</Text>
+                <Text className="text-green-700 font-bold text-center text-base">
+                  ✅ Servicio Completado
+                </Text>
+                <Text className="text-green-600 text-center text-xs mt-1">
+                  El cliente puede ver el reporte.
+                </Text>
               </View>
+            )}
+
+            {/* Estado: cancelado */}
+            {currentStatus === ORDER_STATUS.CANCELLED && (
+              <View className="bg-red-50 p-4 rounded-xl border border-red-200">
+                <Text className="text-red-700 font-bold text-center">❌ Orden Cancelada</Text>
+              </View>
+            )}
+
+            {/* Estado: pendiente (sin asignar al técnico aún) */}
+            {currentStatus === ORDER_STATUS.PENDING && (
+              <View className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                <Text className="text-yellow-700 text-center font-medium">
+                  En espera de asignación por el administrador.
+                </Text>
+              </View>
+            )}
+
+            {/* Botón de acción para el técnico (flujo lineal) */}
+            {stepConfig && nextStatus && (
+              <View>
+                <Text className="text-slate-400 text-sm mb-3 text-center">
+                  {stepConfig.description}
+                </Text>
+                <Button
+                  title={stepConfig.label}
+                  onPress={() => updateStatus(nextStatus)}
+                />
+              </View>
+            )}
+
+            {/* BOTÓN PARA GENERAR COTIZACIÓN (Solo si está aceptado o en progreso) */}
+            {(currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_PROGRESS) && (
+              <Button 
+                title="📝 Generar Cotización" 
+                variant="outline" 
+                className="mt-2"
+                onPress={() => router.push({
+                  pathname: '/(technician)/create-quote',
+                  params: { 
+                    order_id: id, 
+                    client_id: order.client_id,
+                    order_number: order.order_number 
+                  }
+                })} 
+              />
             )}
           </>
         )}
       </Card>
+
       <View className="h-20" />
     </ScrollView>
   );
