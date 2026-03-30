@@ -2,10 +2,11 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/api';
 import sql from '@/lib/db';
 import { enhanceQuote } from '@/lib/quote-utils';
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, ctx?: any) {
   try {
-    const { id } = await params;
     const url = new URL(request.url);
+    // Extraer el id del path: /api/quotes/<id>
+    const id = (ctx?.params?.id) ?? url.pathname.split('/').filter(Boolean).pop();
     const user_id = url.searchParams.get('user_id');
     const role = url.searchParams.get('role');
     
@@ -51,10 +52,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: Request, ctx?: any) {
   try {
-    const { id } = await params;
     const url = new URL(request.url);
+    const id = (ctx?.params?.id) ?? url.pathname.split('/').filter(Boolean).pop();
     const user_id = url.searchParams.get('user_id');
     const role = url.searchParams.get('role');
     

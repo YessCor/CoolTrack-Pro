@@ -23,6 +23,7 @@ export default function JobDetail() {
   const { user } = useAuth();
   const [order, setOrder] = useState<any>(null);
   const [quoteStatus, setQuoteStatus] = useState<string | null>(null);
+  const [quoteId, setQuoteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
@@ -37,7 +38,10 @@ export default function JobDetail() {
         const dataQuote = await resQuote.json();
         if (dataQuote.success) {
           const orderQuote = dataQuote.data.find((q: any) => q.order_id === id);
-          setQuoteStatus(orderQuote ? orderQuote.status : null);
+          if (orderQuote) {
+            setQuoteStatus(orderQuote.status);
+            setQuoteId(orderQuote.id);
+          }
         }
       } else {
         Alert.alert('Error', 'No se pudo cargar el trabajo.');
@@ -217,8 +221,11 @@ export default function JobDetail() {
                   <TouchableOpacity
                     className="flex-row items-center justify-between px-4 py-3.5 rounded-xl border border-surface-border bg-surface"
                     onPress={() => {
-                      if (quoteStatus) {
-                        Alert.alert('Info', 'Ver cotización existente próximamente.');
+                      if (quoteStatus && quoteId) {
+                        router.push({
+                          pathname: '/(technician)/job/quote-detail',
+                          params: { quote_id: quoteId },
+                        });
                       } else {
                         router.push({
                           pathname: '/(technician)/create-quote',

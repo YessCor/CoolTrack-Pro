@@ -72,6 +72,7 @@ export default function TechnicianLayout() {
       />
       <Tabs.Screen name="create-quote" options={{ href: null }} />
       <Tabs.Screen name="job" options={{ href: null }} />
+      <Tabs.Screen name="job/quote-detail" options={{ href: null }} />
     </Tabs>
   );
 }
