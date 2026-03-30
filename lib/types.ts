@@ -145,16 +145,24 @@ export interface Notification {
   created_at: string;
 }
 
-// Order Photos
-export interface OrderPhoto {
+// Media (fotos y documentos)
+export interface Media {
   id: string;
-  order_id: string;
-  uploaded_by?: string;
   url: string;
+  public_id: string;
+  resource_type: string;
+  format: string;
+  bytes: number;
+  uploaded_by?: string;
+  order_id?: string;
+  equipment_id?: string;
+  context?: string;
   caption?: string;
-  phase: 'before' | 'during' | 'after';
   created_at: string;
 }
+
+// Alias para compatibilidad con código existente
+export type OrderPhoto = Media;
 
 // API Response types
 export interface ApiResponse<T> {

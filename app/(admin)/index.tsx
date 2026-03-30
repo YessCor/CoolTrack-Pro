@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { Card } from '../../components/ui/Card';
+import { useAuth } from '../../context/AuthContext';
+import { apiCall } from '../../lib/api';
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState({ assigned: 0, completed: 0, alerts: 0 });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/stats');
-      const data = await response.json();
-      if (data.success) {
+      const { success, data, error } = await apiCall<{ stats: any }>(`/api/admin/stats?user_id=${user.id}&role=${user.role}`);
+      if (success && data) {
         setStats(data.stats);
+      } else {
+        console.error('[ADMIN-DASH] Fetch error:', error);
       }
     } catch (error) {
       console.error('Fetch admin stats error:', error);

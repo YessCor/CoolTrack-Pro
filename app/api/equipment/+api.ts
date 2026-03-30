@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   try {
     const equipments = await sql`
-      SELECT * FROM hvac_equipment 
+      SELECT * FROM equipment 
       WHERE client_id = ${client_id}
       ORDER BY created_at DESC
     `;
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     const newEquipment = await sql`
-      INSERT INTO hvac_equipment (client_id, type, brand, model, serial_number, location)
+      INSERT INTO equipment (client_id, type, brand, model, serial_number, location_description)
       VALUES (${client_id}, ${type}, ${brand || null}, ${model || null}, ${serial_number || null}, ${location})
       RETURNING *;
     `;

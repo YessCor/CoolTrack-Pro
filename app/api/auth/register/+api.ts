@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         id: newUser[0].id,
         email: newUser[0].email,
         name: newUser[0].name,
-        role: newUser[0].role.toUpperCase()
+        role: newUser[0].role
       }
     });
   } catch (error: any) {

@@ -22,9 +22,8 @@ export async function GET(request: Request, context: any) {
 
     // Obtener media asociada (fotos)
     const media = await sql`
-      SELECT url, context FROM media 
-      WHERE (uploaded_by = ${order[0].client_id} OR uploaded_by = ${order[0].technician_id})
-      AND context IN ('service_order', 'document')
+      SELECT url, context, caption FROM media 
+      WHERE order_id = ${id}
       ORDER BY created_at DESC
     `;
 

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Alert } from 'react-native';
 
-export type Role = 'CLIENT' | 'TECHNICIAN' | 'ADMIN' | null;
+export type Role = 'client' | 'technician' | 'admin' | null;
 
 interface User {
   id: string;

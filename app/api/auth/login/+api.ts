@@ -1,5 +1,6 @@
 import sql from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { createErrorResponse, createSuccessResponse } from '@/lib/api';
 
 export async function POST(request: Request) {
   try {
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
 
     if (!email || !password) {
       console.log('[LOGIN-API] Error: Faltan campos');
-      return Response.json({ success: false, error: 'Email y contraseña requeridos' }, { status: 400 });
+      return createErrorResponse('Email y contraseña requeridos', 400);
     }
 
     // BYPASS DE EMERGENCIA PARA PRUEBAS (Solo local)
@@ -16,9 +17,8 @@ export async function POST(request: Request) {
       console.log('[LOGIN-API] !!! BYPASS ACTIVADO PARA yesidcordero1 !!!');
       const tech = await sql`SELECT id, email, name, role FROM users WHERE email = ${email} LIMIT 1`;
       if (tech.length > 0) {
-        return Response.json({
-          success: true,
-          user: { id: tech[0].id, email: tech[0].email, name: tech[0].name, role: 'TECHNICIAN' }
+        return createSuccessResponse({
+          user: { id: tech[0].id, email: tech[0].email, name: tech[0].name, role: tech[0].role }
         });
       }
     }
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
     if (result.length === 0) {
       console.log('[LOGIN-API] Error: Usuario no encontrado');
-      return Response.json({ success: false, error: 'Usuario no encontrado' }, { status: 401 });
+      return createErrorResponse('Usuario no encontrado', 401);
     }
 
     const user = result[0];
@@ -42,20 +42,21 @@ export async function POST(request: Request) {
 
     if (!passwordMatch) {
       console.log('[LOGIN-API] Error: Contraseña incorrecta');
-      return Response.json({ success: false, error: 'Contraseña incorrecta' }, { status: 401 });
+      return createErrorResponse('Contraseña incorrecta', 401);
     }
 
-    return Response.json({
-      success: true,
+    console.log(`[LOGIN-API] Login exitoso para: ${email} (${user.role})`);
+    return createSuccessResponse({
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role.toUpperCase(),
+        role: user.role,
       }
     });
+
   } catch (error: any) {
-    console.error('Login error:', error);
-    return Response.json({ success: false, error: 'Error interno del servidor' }, { status: 500 });
+    console.error('[LOGIN-API] FATAL ERROR:', error.message);
+    return createErrorResponse('Error interno del servidor', 500);
   }
 }

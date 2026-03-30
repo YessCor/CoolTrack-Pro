@@ -1,4 +1,6 @@
 import sql from '@/lib/db';
+import { createErrorResponse, createSuccessResponse } from '@/lib/api';
+import { enhanceQuote } from '@/lib/quote-utils';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -7,10 +9,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const role = url.searchParams.get('role');
     
     if (!user_id || !role) {
-      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return createErrorResponse('Unauthorized', 401);
     }
 
-    const quote = await sql`
+    const quoteResult = await sql`
       SELECT q.*, 
              u_client.name as client_name, 
              u_tech.name as technician_name
@@ -20,18 +22,21 @@ export async function GET(request: Request, { params }: { params: { id: string }
       WHERE q.id = ${params.id}::uuid
     `;
 
-    if (quote.length === 0) {
-      return Response.json({ success: false, error: 'Cotización no encontrada' }, { status: 404 });
+    if (quoteResult.length === 0) {
+      return createErrorResponse('Cotización no encontrada', 404);
     }
 
     const items = await sql`
       SELECT * FROM quote_items WHERE quote_id = ${params.id}::uuid ORDER BY created_at ASC
     `;
 
-    return Response.json({ success: true, quote: quote[0], items });
+    // IMMUTABLE ENHANCEMENT
+    const enhancedQuote = enhanceQuote(quoteResult[0] as any);
+
+    return createSuccessResponse({ quote: enhancedQuote, items });
   } catch (error: any) {
-    console.error('[GET /api/quotes/[id]]', error);
-    return Response.json({ success: false, error: 'Error al obtener detalle' }, { status: 500 });
+    console.error('[GET /api/quotes/[id]] FATAL ERROR:', error.message);
+    return createErrorResponse('Error al obtener detalle', 500);
   }
 }
 
@@ -42,14 +47,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const role = url.searchParams.get('role');
     
     if (!user_id || !role) {
-      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return createErrorResponse('Unauthorized', 401);
     }
 
     const { status } = await request.json();
     const validStatuses = ['draft', 'sent', 'approved', 'rejected', 'expired'];
 
     if (!status || !validStatuses.includes(status)) {
-      return Response.json({ success: false, error: 'Estado inválido' }, { status: 400 });
+      return createErrorResponse('Estado inválido', 400);
     }
 
     const updated = await sql`
@@ -60,12 +65,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     `;
 
     if (updated.length === 0) {
-      return Response.json({ success: false, error: 'Cotización no encontrada' }, { status: 404 });
+      return createErrorResponse('Cotización no encontrada', 404);
     }
 
-    return Response.json({ success: true, quote: updated[0] });
+    // IMMUTABLE ENHANCEMENT
+    const enhancedQuote = enhanceQuote(updated[0] as any);
+
+    return createSuccessResponse({ quote: enhancedQuote });
   } catch (error: any) {
-    console.error('[PATCH /api/quotes/[id]]', error);
-    return Response.json({ success: false, error: 'Error al actualizar estado' }, { status: 500 });
+    console.error('[PATCH /api/quotes/[id]] FATAL ERROR:', error.message);
+    return createErrorResponse('Error al actualizar estado', 500);
   }
 }

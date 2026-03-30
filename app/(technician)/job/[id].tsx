@@ -17,31 +17,51 @@ const STEP_CONFIG: Partial<Record<OrderStatus, { label: string; description: str
 export default function JobDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const [order, setOrder] = useState<any>(null);
+  const [quoteStatus, setQuoteStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  const fetchOrderDetail = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch(`/api/orders/${id}`);
-      const data = await response.json();
-      if (data.success) {
-        setOrder(data.order);
+      if (!user?.id) return;
+
+      // Fetch Order
+      const resOrder = await fetch(`/api/orders/${id}`);
+      const dataOrder = await resOrder.json();
+      
+      if (dataOrder.success) {
+        setOrder(dataOrder.order);
+        
+        // Fetch Quote Status for this order
+        const resQuote = await fetch(`/api/quotes?user_id=${user.id}&role=${user.role}`);
+        const dataQuote = await resQuote.json();
+        
+        if (dataQuote.success) {
+          const orderQuote = dataQuote.data.find((q: any) => q.order_id === id);
+          setQuoteStatus(orderQuote ? orderQuote.status : null);
+        }
       } else {
         Alert.alert('Error', 'No se pudo cargar el trabajo.');
         router.back();
       }
     } catch (error) {
       console.error('[JobDetail] fetch error:', error);
-      Alert.alert('Error', 'Fallo de conexión.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchOrderDetail(); }, [id]);
+  useEffect(() => { fetchData(); }, [id]);
 
   const updateStatus = async (newStatus: OrderStatus) => {
+    // Client Side Guard (mirroring backend)
+    if ((newStatus === 'in_progress' || newStatus === 'completed') && quoteStatus !== 'approved') {
+      Alert.alert('Bloqueado', '⚠️ No puedes iniciar el trabajo sin una cotización aprobada por el cliente.');
+      return;
+    }
+
     setUpdating(true);
     try {
       const response = await fetch(`/api/orders?id=${id}`, {
@@ -72,20 +92,14 @@ export default function JobDetail() {
     );
   }
 
-  if (!order) {
-    return (
-      <View className="flex-1 items-center justify-center p-6 bg-slate-50">
-        <Text className="text-slate-500 text-center font-medium mb-4">
-          No se pudo encontrar esta orden.
-        </Text>
-        <Button title="Volver" onPress={() => router.back()} />
-      </View>
-    );
-  }
+  if (!order) return null;
 
   const currentStatus = (order.status ?? ORDER_STATUS.PENDING) as OrderStatus;
   const nextStatus = TECHNICIAN_NEXT_STATUS[currentStatus];
   const stepConfig = nextStatus ? STEP_CONFIG[currentStatus] : null;
+
+  // Determination if work is blocked by quote status
+  const isWorkBlocked = (nextStatus === 'in_progress' || nextStatus === 'completed') && quoteStatus !== 'approved';
 
   return (
     <ScrollView className="flex-1 bg-slate-50 p-4">
@@ -97,6 +111,25 @@ export default function JobDetail() {
         </View>
         <StatusBadge status={currentStatus} />
       </View>
+
+      {/* Alerta de Cotización (Guardia) */}
+      {(currentStatus === 'accepted' || currentStatus === 'in_transit') && (
+        <Card className={`mb-6 border-0 ${quoteStatus === 'approved' ? 'bg-green-100' : 'bg-amber-100'}`}>
+          <View className="flex-row items-center">
+             <Text className="text-xl mr-2">{quoteStatus === 'approved' ? '✅' : '⚠️'}</Text>
+             <View className="flex-1">
+                <Text className={`font-bold ${quoteStatus === 'approved' ? 'text-green-800' : 'text-amber-800'}`}>
+                  {quoteStatus === 'approved' ? 'Cotización Aprobada' : 'Cotización Pendiente'}
+                </Text>
+                <Text className={`text-xs ${quoteStatus === 'approved' ? 'text-green-600' : 'text-amber-600'}`}>
+                  {quoteStatus === 'approved' 
+                    ? 'Puedes proceder con el inicio del trabajo.' 
+                    : 'Espera a que el cliente apruebe tu propuesta.'}
+                </Text>
+             </View>
+          </View>
+        </Card>
+      )}
 
       {/* Info cliente / dirección */}
       <Card className="mb-6">
@@ -133,55 +166,46 @@ export default function JobDetail() {
                 <Text className="text-green-700 font-bold text-center text-base">
                   ✅ Servicio Completado
                 </Text>
-                <Text className="text-green-600 text-center text-xs mt-1">
-                  El cliente puede ver el reporte.
-                </Text>
               </View>
             )}
 
-            {/* Estado: cancelado */}
-            {currentStatus === ORDER_STATUS.CANCELLED && (
-              <View className="bg-red-50 p-4 rounded-xl border border-red-200">
-                <Text className="text-red-700 font-bold text-center">❌ Orden Cancelada</Text>
-              </View>
-            )}
-
-            {/* Estado: pendiente (sin asignar al técnico aún) */}
-            {currentStatus === ORDER_STATUS.PENDING && (
-              <View className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
-                <Text className="text-yellow-700 text-center font-medium">
-                  En espera de asignación por el administrador.
-                </Text>
-              </View>
-            )}
-
-            {/* Botón de acción para el técnico (flujo lineal) */}
+            {/* BOTÓN DE ACCIÓN (Con Guardia) */}
             {stepConfig && nextStatus && (
               <View>
-                <Text className="text-slate-400 text-sm mb-3 text-center">
-                  {stepConfig.description}
-                </Text>
+                {isWorkBlocked && (
+                  <Text className="text-amber-600 text-xs font-bold mb-2 text-center">
+                    ❌ Debes esperar la aprobación del cliente para continuar.
+                  </Text>
+                )}
                 <Button
                   title={stepConfig.label}
+                  disabled={isWorkBlocked}
                   onPress={() => updateStatus(nextStatus)}
                 />
               </View>
             )}
 
-            {/* BOTÓN PARA GENERAR COTIZACIÓN (Solo si está aceptado o en progreso) */}
-            {(currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_PROGRESS) && (
+            {/* BOTÓN PARA GENERAR/VER COTIZACIÓN */}
+            {(currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_TRANSIT) && (
               <Button 
-                title="📝 Generar Cotización" 
+                title={quoteStatus ? "📋 Ver Cotización" : "📝 Generar Cotización"} 
                 variant="outline" 
                 className="mt-2"
-                onPress={() => router.push({
-                  pathname: '/(technician)/create-quote',
-                  params: { 
-                    order_id: id, 
-                    client_id: order.client_id,
-                    order_number: order.order_number 
+                onPress={() => {
+                  if (quoteStatus) {
+                    // Si ya existe una cotización, ir allá (aquí podrías filtrar por ID)
+                    Alert.alert('Info', 'Funcionalidad de ver cotización existente próximamente.');
+                  } else {
+                    router.push({
+                      pathname: '/(technician)/create-quote',
+                      params: { 
+                        order_id: id, 
+                        client_id: order.client_id,
+                        order_number: order.order_number 
+                      }
+                    });
                   }
-                })} 
+                }} 
               />
             )}
           </>

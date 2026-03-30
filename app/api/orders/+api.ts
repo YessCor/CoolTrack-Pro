@@ -1,5 +1,6 @@
 import sql from '@/lib/db';
 import { isValidOrderStatus, ORDER_STATUS } from '@/lib/order-status';
+import { createErrorResponse, createSuccessResponse } from '@/lib/api';
 
 // ──────────────────────────────────────────────
 // GET /api/orders?user_id=...&role=admin|technician|client
@@ -10,10 +11,7 @@ export async function GET(request: Request) {
   const role = url.searchParams.get('role');
 
   if (!user_id || !role) {
-    return Response.json(
-      { success: false, error: 'user_id y role son requeridos' },
-      { status: 400 }
-    );
+    return createErrorResponse('user_id y role son requeridos', 400);
   }
 
   try {
@@ -33,7 +31,7 @@ export async function GET(request: Request) {
         SELECT o.*, u.name AS client_name 
         FROM service_orders o
         JOIN users u ON o.client_id = u.id
-        WHERE o.technician_id = ${user_id}
+        WHERE o.technician_id = ${user_id}::uuid
         ORDER BY o.created_at DESC
       `;
     } else {
@@ -42,18 +40,15 @@ export async function GET(request: Request) {
         SELECT o.*, t.name AS technician_name 
         FROM service_orders o
         LEFT JOIN users t ON o.technician_id = t.id
-        WHERE o.client_id = ${user_id}
+        WHERE o.client_id = ${user_id}::uuid
         ORDER BY o.created_at DESC
       `;
     }
 
-    return Response.json({ success: true, orders });
+    return createSuccessResponse({ orders });
   } catch (error: any) {
     console.error('[GET /api/orders]', error.message);
-    return Response.json(
-      { success: false, error: 'Error al obtener órdenes' },
-      { status: 500 }
-    );
+    return createErrorResponse('Error al obtener órdenes', 500);
   }
 }
 
@@ -70,28 +65,36 @@ export async function POST(request: Request) {
     // ── ACTUALIZAR ESTADO ──────────────────────
     if (orderId) {
       const { status, notes } = body;
+      console.log(`[ORDER-UPDATE] Solicitud para orden ${orderId} -> ${status}`);
 
       if (!status) {
-        return Response.json(
-          { success: false, error: 'El campo status es requerido' },
-          { status: 400 }
-        );
+        return createErrorResponse('El campo status es requerido', 400);
       }
 
       const normalizedStatus = status.toLowerCase().trim();
 
-      // Validación contra el enum real de la DB
       if (!isValidOrderStatus(normalizedStatus)) {
-        return Response.json(
-          {
-            success: false,
-            error: `Estado inválido: "${status}". Estados permitidos: ${Object.values(ORDER_STATUS).join(', ')}`,
-          },
-          { status: 400 }
-        );
+        return createErrorResponse(`Estado inválido: "${status}".`, 400);
       }
 
-      console.log(`[API] Orden ${orderId}: → ${normalizedStatus}`);
+      // --- GUARDIA DE FLUJO: Cotización Aprobada ---
+      // Si el técnico intenta marcar como 'in_progress' o 'completed',
+      // debe haber al menos una cotización aprobada para esta orden.
+      if (normalizedStatus === 'in_progress' || normalizedStatus === 'completed') {
+        const approvedQuotes = await sql`
+          SELECT id FROM quotes 
+          WHERE order_id = ${orderId}::uuid AND status = 'approved'
+          LIMIT 1
+        `;
+
+        if (approvedQuotes.length === 0) {
+          console.log(`[ORDER-UPDATE] BLOQUEADO: Intento de ${normalizedStatus} sin cotización aprobada (Orden: ${orderId})`);
+          return createErrorResponse(
+            '⚠️ No se puede iniciar el trabajo sin una cotización aprobada por el cliente.',
+            403
+          );
+        }
+      }
 
       const updated = await sql`
         UPDATE service_orders
@@ -104,23 +107,18 @@ export async function POST(request: Request) {
       `;
 
       if (updated.length === 0) {
-        return Response.json(
-          { success: false, error: 'Orden no encontrada' },
-          { status: 404 }
-        );
+        return createErrorResponse('Orden no encontrada', 404);
       }
 
-      return Response.json({ success: true, order: updated[0] });
+      return createSuccessResponse({ order: updated[0] });
     }
 
     // ── CREAR ORDEN ────────────────────────────
     const { client_id, equipment_id, service_type, description, address, priority } = body;
+    console.log('[ORDER-CREATE] Nueva solicitud de orden recibida para cliente:', client_id);
 
     if (!client_id || !description || !address) {
-      return Response.json(
-        { success: false, error: 'client_id, description y address son requeridos' },
-        { status: 400 }
-      );
+      return createErrorResponse('client_id, description y address son requeridos', 400);
     }
 
     const newOrder = await sql`
@@ -128,8 +126,8 @@ export async function POST(request: Request) {
         (client_id, equipment_id, service_type, description, address, priority, status)
       VALUES
         (
-          ${client_id},
-          ${equipment_id ?? null},
+          ${client_id}::uuid,
+          ${equipment_id ? equipment_id + '::uuid' : null},
           ${service_type ?? 'General'},
           ${description},
           ${address},
@@ -139,13 +137,10 @@ export async function POST(request: Request) {
       RETURNING *
     `;
 
-    return Response.json({ success: true, order: newOrder[0] }, { status: 201 });
+    return createSuccessResponse({ order: newOrder[0] }, 201);
 
   } catch (error: any) {
-    console.error('[POST /api/orders]', error.message);
-    return Response.json(
-      { success: false, error: 'Error interno del servidor', detail: error.message },
-      { status: 500 }
-    );
+    console.error('[POST /api/orders] FATAL ERROR:', error.message);
+    return createErrorResponse('Error interno del servidor', 500);
   }
 }

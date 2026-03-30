@@ -1,12 +1,14 @@
-import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
 import { createSuccessResponse, createErrorResponse } from '@/lib/api'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== 'admin') {
-      return createErrorResponse('Unauthorized', 401)
+    const url = new URL(request.url);
+    const user_id = url.searchParams.get('user_id');
+    const role = url.searchParams.get('role')?.toLowerCase();
+    
+    if (!user_id || role !== 'admin') {
+      return createErrorResponse('Unauthorized', 401);
     }
 
     const stats = await Promise.all([

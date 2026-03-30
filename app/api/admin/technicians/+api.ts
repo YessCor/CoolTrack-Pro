@@ -1,6 +1,5 @@
 import sql from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import { ORDER_STATUS } from '@/lib/order-status';
 
 export async function POST(request: Request) {
   try {
@@ -51,32 +50,4 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
-  try {
-    const { order_id, technician_id } = await request.json();
-    
-    console.log('TECH-API-PATCH - Assigning Payload:', { order_id, technician_id });
 
-    if (!order_id || !technician_id) {
-      return Response.json({ success: false, error: 'Order ID y Technician ID requeridos' }, { status: 400 });
-    }
-
-    const updatedOrder = await sql`
-      UPDATE service_orders 
-      SET technician_id = ${technician_id}, 
-          status = ${ORDER_STATUS.ASSIGNED}::order_status, 
-          updated_at = NOW()
-      WHERE id = ${order_id}
-      RETURNING *;
-    `;
-
-    if (updatedOrder.length === 0) {
-      return Response.json({ success: false, error: 'Orden no encontrada' }, { status: 404 });
-    }
-
-    return Response.json({ success: true, order: updatedOrder[0] });
-  } catch (error: any) {
-    console.error('TECH-API-PATCH - ERROR:', error);
-    return Response.json({ success: false, error: 'Error al asignar técnico', debug: error.message }, { status: 500 });
-  }
-}

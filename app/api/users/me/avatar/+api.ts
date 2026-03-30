@@ -24,7 +24,7 @@ export async function PATCH(request: Request) {
       success: true, 
       user: {
         ...updatedUser[0],
-        role: updatedUser[0].role.toUpperCase()
+        role: updatedUser[0].role
       }
     });
   } catch (error: any) {

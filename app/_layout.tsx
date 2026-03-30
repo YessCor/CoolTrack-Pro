@@ -20,11 +20,11 @@ function RootNavigationAdapter() {
       if (!role && !inAuthGroup) {
         router.replace('/(auth)/login');
       } else if (role) {
-        if (role === 'CLIENT' && segments[0] !== '(client)') {
+        if (role === 'client' && segments[0] !== '(client)') {
           router.replace('/(client)');
-        } else if (role === 'TECHNICIAN' && segments[0] !== '(technician)') {
+        } else if (role === 'technician' && segments[0] !== '(technician)') {
           router.replace('/(technician)');
-        } else if (role === 'ADMIN' && segments[0] !== '(admin)') {
+        } else if (role === 'admin' && segments[0] !== '(admin)') {
           router.replace('/(admin)');
         }
       }
