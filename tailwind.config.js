@@ -8,22 +8,38 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#1E40AF', // Azul Zafiro corporativo
-          light: '#3B82F6',
-          dark: '#1E3A8A',
+        brand: {
+          DEFAULT: '#0F4C75',   // Azul petróleo profundo
+          light: '#1B6CA8',
+          dark: '#0A3352',
+          accent: '#00B4D8',    // Cian vibrante
+          muted: '#E8F4FD',
         },
-        secondary: {
-          DEFAULT: '#64748B',
-          light: '#F1F5F9',
+        ink: {
+          DEFAULT: '#0D1B2A',   // Casi negro azulado
+          mid: '#1B2D3E',
+          soft: '#2C3E50',
+        },
+        surface: {
+          DEFAULT: '#F5F7FA',
+          card: '#FFFFFF',
+          border: '#E2E8F0',
+          hover: '#EEF2F7',
         },
         status: {
-          pending: '#F59E0B',
-          progress: '#3B82F6',
+          pending:   '#F59E0B',
+          assigned:  '#06B6D4',
+          progress:  '#6366F1',
+          onway:     '#8B5CF6',
+          onsite:    '#F97316',
           completed: '#10B981',
-          cancelled: '#EF4444'
+          invoiced:  '#64748B',
+          cancelled: '#EF4444',
         }
-      }
+      },
+      fontFamily: {
+        sans: ['System'],
+      },
     },
   },
   plugins: [],

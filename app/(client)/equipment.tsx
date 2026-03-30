@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { Card } from '../../components/ui/Card';
+import { MapPinIcon, LayersIcon, AirVentIcon } from '../../components/ui/Icons';
 
 export default function EquipmentScreen() {
   const { user } = useAuth();
@@ -9,54 +9,66 @@ export default function EquipmentScreen() {
   const [loading, setLoading] = useState(true);
 
   const fetchEquipments = async () => {
-    if (!user?.id || user.id === 'mock') {
-      setLoading(false);
-      return;
-    }
-    
+    if (!user?.id || user.id === 'mock') { setLoading(false); return; }
     setLoading(true);
     try {
-      const response = await fetch(`/api/equipment?client_id=${user.id}`);
-      const data = await response.json();
-      if (data.success) {
-        setEquipments(data.equipments);
-      }
-    } catch (error) {
-      console.error('Fetch equipment error:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`/api/equipment?client_id=${user.id}`);
+      const data = await res.json();
+      if (data.success) setEquipments(data.equipments);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchEquipments();
-  }, [user?.id]);
+  useEffect(() => { fetchEquipments(); }, [user?.id]);
 
-  if (loading) return <ActivityIndicator size="large" color="#1E40AF" className="mt-10" />;
+  if (loading) return (
+    <View className="flex-1 bg-surface items-center justify-center">
+      <ActivityIndicator size="large" color="#0F4C75" />
+    </View>
+  );
 
   return (
-    <View className="flex-1 bg-slate-50 p-4">
+    <View className="flex-1 bg-surface">
       <FlatList
         data={equipments}
         keyExtractor={item => item.id.toString()}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={fetchEquipments} colors={["#1E40AF"]} />
-        }
+        contentContainerStyle={{ padding: 16, gap: 10 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchEquipments} colors={['#0F4C75']} tintColor="#0F4C75" />}
         renderItem={({ item }) => (
-          <Card className="mb-4">
-            <Text className="text-lg font-bold text-slate-800 mb-1">{item.type} - {item.brand}</Text>
-            <Text className="text-slate-600 mb-2">📍 {item.location}</Text>
-            <View className="bg-slate-100 p-3 rounded-xl border border-slate-200">
-              <Text className="text-[10px] text-slate-400 font-bold uppercase mb-1">Modelo / Serial</Text>
-              <Text className="text-sm text-slate-800">{item.model || 'N/A'} - {item.serial_number || 'N/A'}</Text>
+          <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+            <View className="px-4 pt-4 pb-3 flex-row items-start gap-3 border-b border-surface-border">
+              <View className="w-10 h-10 rounded-xl bg-brand/10 items-center justify-center" style={{ backgroundColor: '#E8F4FD' }}>
+                <AirVentIcon size={20} color="#0F4C75" />
+              </View>
+              <View className="flex-1">
+                <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 15 }}>
+                  {item.type} — {item.brand}
+                </Text>
+                <View className="flex-row items-center gap-1.5 mt-1">
+                  <MapPinIcon size={12} color="#94a3b8" />
+                  <Text style={{ color: '#64748b', fontSize: 12 }}>{item.location}</Text>
+                </View>
+              </View>
             </View>
-          </Card>
+            <View className="px-4 py-3 flex-row items-center gap-3">
+              <LayersIcon size={14} color="#94a3b8" />
+              <Text style={{ color: '#64748b', fontSize: 13 }}>
+                {item.model || 'N/A'} · Serie: {item.serial_number || 'N/A'}
+              </Text>
+            </View>
+          </View>
         )}
         ListEmptyComponent={
-          <View className="items-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 mt-4 px-6">
-            <Text className="text-slate-400 text-center font-medium italic">
-              Aún no tienes equipos registrados. Cuando un técnico realice un servicio, tus equipos aparecerán aquí.
-            </Text>
+          <View className="items-center py-20 gap-4">
+            <View className="w-20 h-20 rounded-2xl bg-surface-hover items-center justify-center">
+              <AirVentIcon size={32} color="#94a3b8" />
+            </View>
+            <View className="items-center gap-1 px-8">
+              <Text style={{ color: '#0D1B2A', fontWeight: '700', fontSize: 16 }}>Sin equipos registrados</Text>
+              <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>
+                Tus equipos aparecerán aquí después del primer servicio técnico.
+              </Text>
+            </View>
           </View>
         }
       />

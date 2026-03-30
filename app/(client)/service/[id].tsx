@@ -1,11 +1,11 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
+import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../../../context/AuthContext';
 import { apiCall } from '../../../lib/api';
+import { MapPinIcon, UserIcon, CalendarIcon, FileTextIcon, AirVentIcon, ChevronRightIcon } from '../../../components/ui/Icons';
 
 export default function ServiceDetail() {
   const { id } = useLocalSearchParams();
@@ -17,14 +17,12 @@ export default function ServiceDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDetail = async () => {
+    const load = async () => {
       try {
-        const orderRes = await apiCall<{ order: any, media: any[] }>(`/api/orders/${id}?user_id=${user?.id}&role=${user?.role}`);
+        const orderRes = await apiCall<{ order: any; media: any[] }>(`/api/orders/${id}?user_id=${user?.id}&role=${user?.role}`);
         if (orderRes.success && orderRes.data) {
           setOrder(orderRes.data.order);
           setMedia(orderRes.data.media || []);
-          
-          // Buscar cotizaciones vinculadas a esta orden
           const quoteRes = await apiCall<{ data: any[] }>(`/api/quotes?user_id=${user?.id}&role=${user?.role}`);
           if (quoteRes.success && quoteRes.data) {
             setQuotes(quoteRes.data.data.filter((q: any) => q.order_id === id));
@@ -33,101 +31,129 @@ export default function ServiceDetail() {
           Alert.alert('Error', 'No se encontró la orden.');
           router.back();
         }
-      } catch (error) {
-        console.error('Fetch service detail error:', error);
-      } finally {
-        setLoading(false);
-      }
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
     };
-    fetchDetail();
+    load();
   }, [id]);
 
-  if (loading) return <ActivityIndicator size="large" color="#1E40AF" className="mt-20" />;
+  if (loading) return (
+    <View className="flex-1 bg-surface items-center justify-center">
+      <ActivityIndicator size="large" color="#0F4C75" />
+    </View>
+  );
 
-  if (!order) {
-    return (
-      <View className="flex-1 items-center justify-center p-6">
-        <Text className="text-slate-500 text-center font-medium">No se pudo cargar la información de esta orden.</Text>
-        <Button title="Volver" onPress={() => router.back()} className="mt-4" />
-      </View>
-    );
-  }
+  if (!order) return (
+    <View className="flex-1 bg-surface items-center justify-center p-6 gap-4">
+      <Text style={{ color: '#64748b', textAlign: 'center', fontSize: 15 }}>No se pudo cargar la información.</Text>
+      <Button title="Volver" onPress={() => router.back()} />
+    </View>
+  );
 
   return (
-    <ScrollView className="flex-1 bg-slate-50 p-4">
-      <View className="flex-row justify-between items-center mb-6 mt-2">
-        <View className="flex-1 mr-2">
-          <Text className="text-2xl font-bold text-slate-800">Orden #{order?.order_number || id}</Text>
-          <Text className="text-slate-500">{order?.service_type}</Text>
+    <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* Dark header */}
+      <View className="bg-ink px-5 pt-5 pb-8">
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 mr-3">
+            <Text style={{ color: '#4A6785', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
+              ORDEN #{order.order_number || String(id).slice(0, 8)}
+            </Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginTop: 3 }}>{order.service_type}</Text>
+          </View>
+          <StatusBadge status={order.status} />
         </View>
-        <StatusBadge status={order?.status} />
       </View>
 
-      <Card className="mb-6">
-        <Text className="font-bold text-lg mb-2 text-slate-800">Detalles de la Solicitud</Text>
-        <Text className="text-slate-600 leading-relaxed mb-4">{order.description}</Text>
-        <View className="pt-4 border-t border-slate-100">
-          <Text className="text-slate-400 text-xs font-bold uppercase mb-1">Dirección Registrada:</Text>
-          <Text className="text-slate-700">{order.address}</Text>
-        </View>
-      </Card>
+      <View style={{ marginTop: -16, marginHorizontal: 16, gap: 12 }}>
 
-      <Text className="text-xl font-bold text-slate-800 mb-3">Técnico Asignado</Text>
-      <Card className="mb-6 flex-row items-center border-l-4 border-primary">
-        <View className="w-12 h-12 bg-slate-200 rounded-full items-center justify-center mr-4">
-          <Text className="text-xl">👨‍🔧</Text>
+        {/* Description */}
+        <View className="bg-surface-card rounded-2xl border border-surface-border p-4">
+          <View className="flex-row items-center gap-2 mb-3">
+            <FileTextIcon size={16} color="#0F4C75" />
+            <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 14 }}>Descripción del problema</Text>
+          </View>
+          <Text style={{ color: '#64748b', fontSize: 14, lineHeight: 21 }}>{order.description}</Text>
         </View>
-        <View>
-          <Text className="text-lg font-bold text-slate-800">
-            {order.technician_name || 'Pendiente de asignación'}
-          </Text>
-          <Text className="text-slate-500 text-sm">Staff Técnico CoolTrack-Pro</Text>
-        </View>
-      </Card>
 
-      {quotes.length > 0 && (
-        <>
-          <Text className="text-xl font-bold text-slate-800 mb-3">Cotizaciones Recibidas</Text>
-          <View className="mb-8">
+        {/* Details row */}
+        <View className="flex-row gap-3">
+          <View className="flex-1 bg-surface-card rounded-2xl border border-surface-border p-4 gap-2">
+            <MapPinIcon size={16} color="#94a3b8" />
+            <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>DIRECCIÓN</Text>
+            <Text style={{ color: '#0D1B2A', fontSize: 13, fontWeight: '600', lineHeight: 18 }}>{order.address}</Text>
+          </View>
+          <View className="flex-1 bg-surface-card rounded-2xl border border-surface-border p-4 gap-2">
+            <CalendarIcon size={16} color="#94a3b8" />
+            <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>FECHA</Text>
+            <Text style={{ color: '#0D1B2A', fontSize: 13, fontWeight: '600' }}>
+              {new Date(order.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </Text>
+          </View>
+        </View>
+
+        {/* Technician */}
+        <View className="bg-surface-card rounded-2xl border overflow-hidden" style={{ borderLeftWidth: 3, borderLeftColor: '#0F4C75', borderColor: '#E2E8F0' }}>
+          <View className="px-4 py-4 flex-row items-center gap-3">
+            <View className="w-12 h-12 rounded-full bg-brand items-center justify-center">
+              <UserIcon size={22} color="#fff" />
+            </View>
+            <View className="flex-1">
+              <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>TÉCNICO ASIGNADO</Text>
+              <Text style={{ color: '#0D1B2A', fontSize: 15, fontWeight: '700', marginTop: 1 }}>
+                {order.technician_name || 'Pendiente de asignación'}
+              </Text>
+              <Text style={{ color: '#64748b', fontSize: 12, marginTop: 1 }}>Staff Técnico CoolTrack</Text>
+            </View>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: order.technician_name ? '#10B981' : '#F59E0B' }} />
+          </View>
+        </View>
+
+        {/* Quotes */}
+        {quotes.length > 0 && (
+          <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+            <View className="px-4 py-3 border-b border-surface-border flex-row items-center gap-2">
+              <FileTextIcon size={16} color="#0F4C75" />
+              <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 14 }}>Cotizaciones recibidas</Text>
+            </View>
             {quotes.map((quote) => (
-              <TouchableOpacity 
-                key={quote.id} 
-                className="mb-3" 
-                onPress={() => router.push({
-                  pathname: '/(client)/quote/[id]',
-                  params: { id: quote.id }
-                })}
+              <TouchableOpacity
+                key={quote.id}
+                onPress={() => router.push({ pathname: '/(client)/quote/[id]', params: { id: quote.id } })}
+                className="flex-row items-center justify-between px-4 py-3.5 border-b border-surface-border"
               >
-                <Card className="flex-row justify-between items-center border-l-4 border-yellow-500">
-                  <View>
-                    <Text className="font-bold text-slate-800">{quote.display_quote_number}</Text>
-                    <Text className="text-primary font-bold text-lg">${Number(quote.total).toFixed(2)}</Text>
-                  </View>
-                  <View className="items-end">
-                    <StatusBadge status={quote.status} />
-                    <Text className="text-primary font-bold text-xs mt-2">VER DETALLE →</Text>
-                  </View>
-                </Card>
+                <View>
+                  <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 14 }}>{quote.display_quote_number}</Text>
+                  <Text style={{ color: '#0F4C75', fontWeight: '800', fontSize: 16, marginTop: 1 }}>
+                    ${Number(quote.total).toFixed(2)}
+                  </Text>
+                </View>
+                <View className="flex-row items-center gap-2">
+                  <StatusBadge status={quote.status} />
+                  <ChevronRightIcon size={16} color="#94a3b8" />
+                </View>
               </TouchableOpacity>
             ))}
           </View>
-        </>
-      )}
+        )}
 
-      {media.length > 0 && (
-        <>
-          <Text className="text-xl font-bold text-slate-800 mb-3">Evidencias Visuales</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8">
-            {media.map((item, index) => (
-              <View key={index} className="mr-3 w-40 h-40 bg-slate-200 rounded-3xl overflow-hidden shadow-sm">
-                <Image source={{ uri: item.url }} className="w-full h-full" />
-              </View>
-            ))}
-          </ScrollView>
-        </>
-      )}
+        {/* Media */}
+        {media.length > 0 && (
+          <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+            <View className="px-4 py-3 border-b border-surface-border flex-row items-center gap-2">
+              <AirVentIcon size={16} color="#0F4C75" />
+              <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 14 }}>Evidencias visuales</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 12, gap: 10 }}>
+              {media.map((m: any) => (
+                <Image key={m.id} source={{ uri: m.url }} style={{ width: 160, height: 120, borderRadius: 12 }} resizeMode="cover" />
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
-      <View className="h-20" />
+        <Button title="Volver a mis solicitudes" variant="outline" onPress={() => router.back()} className="w-full" />
+      </View>
     </ScrollView>
   );
 }

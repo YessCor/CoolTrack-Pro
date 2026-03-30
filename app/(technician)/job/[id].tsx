@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Card } from '../../../components/ui/Card';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Button } from '../../../components/ui/Button';
+import { useAuth } from '../../../context/AuthContext';
 import { ORDER_STATUS, TECHNICIAN_NEXT_STATUS, ORDER_STATUS_LABEL, OrderStatus } from '../../../lib/order-status';
+import {
+  MapPinIcon, UserIcon, FileTextIcon, ClipboardIcon,
+  CheckCircleIcon, AlertTriangleIcon, ChevronRightIcon, MapPinIcon as NavIcon,
+} from '../../../components/ui/Icons';
 
-// Botones y mensajes para cada paso del técnico
-const STEP_CONFIG: Partial<Record<OrderStatus, { label: string; description: string }>> = {
-  assigned:    { label: '✅ Aceptar Trabajo',          description: 'Confirma que tomaste este servicio.' },
-  accepted:    { label: '🚗 Estoy en Camino',           description: 'Informa que vas hacia el cliente.' },
-  in_transit:  { label: '📍 Llegué al Sitio',           description: 'Confirma tu llegada al lugar.' },
-  in_progress: { label: '🏁 Finalizar y Cerrar Servicio', description: 'Marca el trabajo como completado.' },
+const STEP_CONFIG: Partial<Record<OrderStatus, { label: string; sub: string }>> = {
+  assigned:    { label: 'Aceptar trabajo',         sub: 'Confirma que tomaste este servicio.' },
+  accepted:    { label: 'Reportar: En camino',      sub: 'Informa que vas hacia el cliente.' },
+  in_transit:  { label: 'Reportar: Llegué al sitio', sub: 'Confirma tu llegada al lugar.' },
+  in_progress: { label: 'Finalizar servicio',       sub: 'Marca el trabajo como completado.' },
 };
 
 export default function JobDetail() {
@@ -26,18 +29,12 @@ export default function JobDetail() {
   const fetchData = async () => {
     try {
       if (!user?.id) return;
-
-      // Fetch Order
       const resOrder = await fetch(`/api/orders/${id}`);
       const dataOrder = await resOrder.json();
-      
       if (dataOrder.success) {
         setOrder(dataOrder.order);
-        
-        // Fetch Quote Status for this order
         const resQuote = await fetch(`/api/quotes?user_id=${user.id}&role=${user.role}`);
         const dataQuote = await resQuote.json();
-        
         if (dataQuote.success) {
           const orderQuote = dataQuote.data.find((q: any) => q.order_id === id);
           setQuoteStatus(orderQuote ? orderQuote.status : null);
@@ -46,173 +43,204 @@ export default function JobDetail() {
         Alert.alert('Error', 'No se pudo cargar el trabajo.');
         router.back();
       }
-    } catch (error) {
-      console.error('[JobDetail] fetch error:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, [id]);
 
   const updateStatus = async (newStatus: OrderStatus) => {
-    // Client Side Guard (mirroring backend)
     if ((newStatus === 'in_progress' || newStatus === 'completed') && quoteStatus !== 'approved') {
-      Alert.alert('Bloqueado', '⚠️ No puedes iniciar el trabajo sin una cotización aprobada por el cliente.');
+      Alert.alert('Bloqueado', 'No puedes continuar sin una cotización aprobada por el cliente.');
       return;
     }
-
     setUpdating(true);
     try {
-      const response = await fetch(`/api/orders?id=${id}`, {
+      const res = await fetch(`/api/orders?id=${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      const data = await response.json();
-
+      const data = await res.json();
       if (data.success) {
         setOrder(data.order);
-        Alert.alert('✅ Actualizado', `Estado: ${ORDER_STATUS_LABEL[newStatus]}`);
+        Alert.alert('Estado actualizado', ORDER_STATUS_LABEL[newStatus]);
       } else {
         Alert.alert('Error', data.error || 'No se pudo actualizar el estado.');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Fallo de conexión al actualizar.');
-    } finally {
-      setUpdating(false);
-    }
+    } catch { Alert.alert('Error', 'Fallo de conexión.'); }
+    finally { setUpdating(false); }
   };
 
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-slate-50">
-        <ActivityIndicator size="large" color="#1E40AF" />
-      </View>
-    );
-  }
+  if (loading) return (
+    <View className="flex-1 bg-surface items-center justify-center">
+      <ActivityIndicator size="large" color="#0F4C75" />
+    </View>
+  );
 
   if (!order) return null;
 
   const currentStatus = (order.status ?? ORDER_STATUS.PENDING) as OrderStatus;
   const nextStatus = TECHNICIAN_NEXT_STATUS[currentStatus];
   const stepConfig = nextStatus ? STEP_CONFIG[currentStatus] : null;
-
-  // Determination if work is blocked by quote status
   const isWorkBlocked = (nextStatus === 'in_progress' || nextStatus === 'completed') && quoteStatus !== 'approved';
+  const quoteApproved = quoteStatus === 'approved';
+  const showQuoteAlert = currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_TRANSIT;
 
   return (
-    <ScrollView className="flex-1 bg-slate-50 p-4">
-      {/* Encabezado */}
-      <View className="flex-row items-center mb-6 mt-2">
-        <View className="flex-1">
-          <Text className="text-2xl font-bold text-slate-800">Orden #{order.order_number}</Text>
-          <Text className="text-slate-500">{order.service_type}</Text>
+    <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* Dark header */}
+      <View className="bg-ink px-5 pt-5 pb-10">
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 mr-3">
+            <Text style={{ color: '#4A6785', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
+              ORDEN #{order.order_number}
+            </Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginTop: 3 }}>{order.service_type}</Text>
+          </View>
+          <StatusBadge status={currentStatus} />
         </View>
-        <StatusBadge status={currentStatus} />
       </View>
 
-      {/* Alerta de Cotización (Guardia) */}
-      {(currentStatus === 'accepted' || currentStatus === 'in_transit') && (
-        <Card className={`mb-6 border-0 ${quoteStatus === 'approved' ? 'bg-green-100' : 'bg-amber-100'}`}>
-          <View className="flex-row items-center">
-             <Text className="text-xl mr-2">{quoteStatus === 'approved' ? '✅' : '⚠️'}</Text>
-             <View className="flex-1">
-                <Text className={`font-bold ${quoteStatus === 'approved' ? 'text-green-800' : 'text-amber-800'}`}>
-                  {quoteStatus === 'approved' ? 'Cotización Aprobada' : 'Cotización Pendiente'}
-                </Text>
-                <Text className={`text-xs ${quoteStatus === 'approved' ? 'text-green-600' : 'text-amber-600'}`}>
-                  {quoteStatus === 'approved' 
-                    ? 'Puedes proceder con el inicio del trabajo.' 
-                    : 'Espera a que el cliente apruebe tu propuesta.'}
-                </Text>
-             </View>
+      <View style={{ marginTop: -20, marginHorizontal: 16, gap: 12 }}>
+
+        {/* Quote alert banner */}
+        {showQuoteAlert && (
+          <View
+            className="rounded-2xl px-4 py-3.5 flex-row items-center gap-3"
+            style={{ backgroundColor: quoteApproved ? '#ECFDF5' : '#FFFBEB', borderWidth: 1, borderColor: quoteApproved ? '#6EE7B7' : '#FCD34D' }}
+          >
+            {quoteApproved
+              ? <CheckCircleIcon size={20} color="#059669" />
+              : <AlertTriangleIcon size={20} color="#D97706" />
+            }
+            <View className="flex-1">
+              <Text style={{ fontWeight: '700', fontSize: 13, color: quoteApproved ? '#065F46' : '#92400E' }}>
+                {quoteApproved ? 'Cotización aprobada' : 'Cotización pendiente'}
+              </Text>
+              <Text style={{ fontSize: 12, color: quoteApproved ? '#047857' : '#B45309', marginTop: 1 }}>
+                {quoteApproved ? 'Puedes proceder con el inicio del trabajo.' : 'Espera a que el cliente apruebe tu propuesta.'}
+              </Text>
+            </View>
           </View>
-        </Card>
-      )}
-
-      {/* Info cliente / dirección */}
-      <Card className="mb-6">
-        <Text className="font-bold text-lg mb-2 text-slate-800">
-          Cliente: {order.client_name}
-        </Text>
-        <Text className="text-slate-600 mb-3">📍 {order.address}</Text>
-        <View className="h-32 bg-slate-200 rounded-xl items-center justify-center border border-slate-300 mb-3">
-          <Text className="text-slate-500 font-medium">🗺️ Mapa de Ruta</Text>
-        </View>
-        <Button
-          title="Navegar (GPS)"
-          variant="outline"
-          onPress={() => Alert.alert('GPS', 'Abriendo navegación...')}
-        />
-      </Card>
-
-      {/* Descripción */}
-      <Text className="text-xl font-bold text-slate-800 mb-2">Descripción</Text>
-      <Card className="mb-6">
-        <Text className="text-slate-700 leading-relaxed">{order.description}</Text>
-      </Card>
-
-      {/* Flujo de ejecución */}
-      <Text className="text-xl font-bold text-slate-800 mb-3">Flujo de Ejecución</Text>
-      <Card className="mb-6 gap-3">
-        {updating ? (
-          <ActivityIndicator color="#1E40AF" />
-        ) : (
-          <>
-            {/* Estado: completado */}
-            {currentStatus === ORDER_STATUS.COMPLETED && (
-              <View className="bg-green-50 p-4 rounded-xl border border-green-200">
-                <Text className="text-green-700 font-bold text-center text-base">
-                  ✅ Servicio Completado
-                </Text>
-              </View>
-            )}
-
-            {/* BOTÓN DE ACCIÓN (Con Guardia) */}
-            {stepConfig && nextStatus && (
-              <View>
-                {isWorkBlocked && (
-                  <Text className="text-amber-600 text-xs font-bold mb-2 text-center">
-                    ❌ Debes esperar la aprobación del cliente para continuar.
-                  </Text>
-                )}
-                <Button
-                  title={stepConfig.label}
-                  disabled={isWorkBlocked}
-                  onPress={() => updateStatus(nextStatus)}
-                />
-              </View>
-            )}
-
-            {/* BOTÓN PARA GENERAR/VER COTIZACIÓN */}
-            {(currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_TRANSIT) && (
-              <Button 
-                title={quoteStatus ? "📋 Ver Cotización" : "📝 Generar Cotización"} 
-                variant="outline" 
-                className="mt-2"
-                onPress={() => {
-                  if (quoteStatus) {
-                    // Si ya existe una cotización, ir allá (aquí podrías filtrar por ID)
-                    Alert.alert('Info', 'Funcionalidad de ver cotización existente próximamente.');
-                  } else {
-                    router.push({
-                      pathname: '/(technician)/create-quote',
-                      params: { 
-                        order_id: id, 
-                        client_id: order.client_id,
-                        order_number: order.order_number 
-                      }
-                    });
-                  }
-                }} 
-              />
-            )}
-          </>
         )}
-      </Card>
 
-      <View className="h-20" />
+        {/* Client & address */}
+        <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+          <View className="px-4 pt-4 pb-3 flex-row items-center gap-3 border-b border-surface-border">
+            <View className="w-10 h-10 rounded-full bg-brand items-center justify-center">
+              <UserIcon size={18} color="#fff" />
+            </View>
+            <View className="flex-1">
+              <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>CLIENTE</Text>
+              <Text style={{ color: '#0D1B2A', fontWeight: '700', fontSize: 15 }}>{order.client_name}</Text>
+            </View>
+          </View>
+          <View className="px-4 py-3 flex-row items-center gap-2">
+            <MapPinIcon size={15} color="#94a3b8" />
+            <Text style={{ color: '#64748b', fontSize: 13, flex: 1 }}>{order.address}</Text>
+          </View>
+          {/* Map placeholder */}
+          <View style={{ height: 120, margin: 12, borderRadius: 12, backgroundColor: '#EEF2F7', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <NavIcon size={20} color="#94a3b8" />
+            <Text style={{ color: '#94a3b8', fontSize: 12 }}>Mapa de ruta</Text>
+          </View>
+          <View className="px-4 pb-4">
+            <Button
+              title="Navegar con GPS"
+              variant="outline"
+              size="sm"
+              onPress={() => Alert.alert('GPS', 'Abriendo navegación...')}
+              className="w-full"
+            />
+          </View>
+        </View>
+
+        {/* Description */}
+        <View className="bg-surface-card rounded-2xl border border-surface-border p-4">
+          <View className="flex-row items-center gap-2 mb-2">
+            <FileTextIcon size={15} color="#0F4C75" />
+            <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 13 }}>Descripción</Text>
+          </View>
+          <Text style={{ color: '#64748b', fontSize: 13, lineHeight: 20 }}>{order.description}</Text>
+        </View>
+
+        {/* Action flow */}
+        <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+          <View className="px-4 py-3 border-b border-surface-border flex-row items-center gap-2">
+            <ClipboardIcon size={15} color="#0F4C75" />
+            <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 13 }}>Flujo de ejecución</Text>
+          </View>
+          <View className="p-4 gap-3">
+            {updating ? (
+              <View className="items-center py-4">
+                <ActivityIndicator color="#0F4C75" />
+                <Text style={{ color: '#64748b', fontSize: 13, marginTop: 8 }}>Actualizando estado...</Text>
+              </View>
+            ) : (
+              <>
+                {/* Completed state */}
+                {currentStatus === ORDER_STATUS.COMPLETED && (
+                  <View className="bg-emerald-50 rounded-xl p-4 flex-row items-center gap-3 border border-emerald-100">
+                    <CheckCircleIcon size={24} color="#059669" />
+                    <View>
+                      <Text style={{ color: '#065F46', fontWeight: '700', fontSize: 15 }}>Servicio completado</Text>
+                      <Text style={{ color: '#047857', fontSize: 12, marginTop: 1 }}>El cliente puede ver el reporte.</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Next action button */}
+                {stepConfig && nextStatus && (
+                  <View className="gap-2">
+                    {isWorkBlocked && (
+                      <View className="bg-amber-50 rounded-xl px-3 py-2 flex-row items-center gap-2 border border-amber-100">
+                        <AlertTriangleIcon size={14} color="#D97706" />
+                        <Text style={{ color: '#B45309', fontSize: 12, fontWeight: '600', flex: 1 }}>
+                          Requiere cotización aprobada para continuar.
+                        </Text>
+                      </View>
+                    )}
+                    <Button
+                      title={stepConfig.label}
+                      disabled={isWorkBlocked}
+                      size="lg"
+                      onPress={() => updateStatus(nextStatus)}
+                      className="w-full"
+                    />
+                    <Text style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center' }}>{stepConfig.sub}</Text>
+                  </View>
+                )}
+
+                {/* Quote button */}
+                {(currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_TRANSIT) && (
+                  <TouchableOpacity
+                    className="flex-row items-center justify-between px-4 py-3.5 rounded-xl border border-surface-border bg-surface"
+                    onPress={() => {
+                      if (quoteStatus) {
+                        Alert.alert('Info', 'Ver cotización existente próximamente.');
+                      } else {
+                        router.push({
+                          pathname: '/(technician)/create-quote',
+                          params: { order_id: id, client_id: order.client_id, order_number: order.order_number },
+                        });
+                      }
+                    }}
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <FileTextIcon size={16} color="#0F4C75" />
+                      <Text style={{ color: '#0F4C75', fontWeight: '700', fontSize: 14 }}>
+                        {quoteStatus ? 'Ver cotización' : 'Generar cotización'}
+                      </Text>
+                    </View>
+                    <ChevronRightIcon size={16} color="#0F4C75" />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </View>
     </ScrollView>
   );
 }

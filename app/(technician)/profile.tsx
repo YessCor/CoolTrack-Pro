@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
-import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { uploadToCloudinary } from '../../services/cloudinary.service';
+import { UserIcon, ShieldIcon, MailIcon, FileTextIcon, PlusIcon, CameraIcon, CalendarIcon } from '../../components/ui/Icons';
 
 export default function TechnicianProfile() {
   const { user, updateUser } = useAuth();
@@ -16,42 +16,24 @@ export default function TechnicianProfile() {
   const fetchDocuments = async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`/api/users/me/documents?user_id=${user.id}`);
-      const data = await response.json();
-      if (data.success) {
-        setDocuments(data.documents);
-      }
-    } catch (error) {
-      console.error('Error fetching docs:', error);
-    } finally {
-      setLoadingDocs(false);
-    }
+      const res = await fetch(`/api/users/me/documents?user_id=${user.id}`);
+      const data = await res.json();
+      if (data.success) setDocuments(data.documents);
+    } catch (e) { console.error(e); }
+    finally { setLoadingDocs(false); }
   };
 
-  useEffect(() => {
-    fetchDocuments();
-  }, [user?.id]);
+  useEffect(() => { fetchDocuments(); }, [user?.id]);
 
-  const pickImage = async (isAvatar: boolean = false) => {
+  const pickImage = async (isAvatar = false) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería.');
-      return;
-    }
-
+    if (status !== 'granted') { Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería.'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: isAvatar ? [1, 1] : undefined,
-      quality: 0.7,
+      mediaTypes: ['images'], allowsEditing: true,
+      aspect: isAvatar ? [1, 1] : undefined, quality: 0.7,
     });
-
     if (!result.canceled) {
-      if (isAvatar) {
-        handleAvatarUpload(result.assets[0].uri);
-      } else {
-        handleDocumentUpload(result.assets[0].uri);
-      }
+      isAvatar ? handleAvatarUpload(result.assets[0].uri) : handleDocumentUpload(result.assets[0].uri);
     }
   };
 
@@ -59,137 +41,130 @@ export default function TechnicianProfile() {
     setUploadingAvatar(true);
     try {
       const cloudData = await uploadToCloudinary(uri);
-      if (!cloudData) throw new Error('Error Cloudinary');
-
-      const response = await fetch('/api/users/me/avatar', {
+      if (!cloudData) throw new Error();
+      const res = await fetch('/api/users/me/avatar', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user?.id,
-          avatar_url: cloudData.secure_url,
-        }),
+        body: JSON.stringify({ user_id: user?.id, avatar_url: cloudData.secure_url }),
       });
-
-      const data = await response.json();
-      if (data.success) {
-        updateUser({ avatar_url: cloudData.secure_url });
-        Alert.alert('Éxito', 'Foto de perfil actualizada.');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar la foto.');
-    } finally {
-      setUploadingAvatar(false);
-    }
+      const data = await res.json();
+      if (data.success) { updateUser({ avatar_url: cloudData.secure_url }); Alert.alert('Actualizado', 'Foto de perfil actualizada.'); }
+    } catch { Alert.alert('Error', 'No se pudo actualizar la foto.'); }
+    finally { setUploadingAvatar(false); }
   };
 
   const handleDocumentUpload = async (uri: string) => {
     setUploading(true);
     try {
       const cloudData = await uploadToCloudinary(uri);
-      if (!cloudData) throw new Error('Error Cloudinary');
-
-      const response = await fetch('/api/users/me/documents', {
+      if (!cloudData) throw new Error();
+      const res = await fetch('/api/users/me/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: user?.id,
-          url: cloudData.secure_url,
-          public_id: cloudData.public_id,
-          resource_type: cloudData.resource_type,
-          context: 'document',
-          caption: 'Certificación Staff'
+          user_id: user?.id, url: cloudData.secure_url,
+          public_id: cloudData.public_id, resource_type: cloudData.resource_type,
+          context: 'document', caption: 'Certificación Staff',
         }),
       });
-
-      const data = await response.json();
-      if (data.success) {
-        Alert.alert('Éxito', 'Documento guardado.');
-        fetchDocuments();
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Fallo al subir documento.');
-    } finally {
-      setUploading(false);
-    }
+      const data = await res.json();
+      if (data.success) { Alert.alert('Guardado', 'Documento subido correctamente.'); fetchDocuments(); }
+    } catch { Alert.alert('Error', 'No se pudo subir el documento.'); }
+    finally { setUploading(false); }
   };
 
   return (
-    <ScrollView className="flex-1 bg-slate-50 p-4">
-      <View className="items-center mt-6 mb-8">
-        <TouchableOpacity 
-          onPress={() => pickImage(true)} 
-          disabled={uploadingAvatar}
-          className="relative"
-        >
-          <View className="w-28 h-28 bg-primary/10 rounded-full items-center justify-center border-4 border-white shadow-md overflow-hidden">
+    <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* Profile hero */}
+      <View className="bg-ink px-5 pt-6 pb-10 items-center">
+        <TouchableOpacity onPress={() => pickImage(true)} disabled={uploadingAvatar} style={{ position: 'relative' }}>
+          <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: '#1B2D3E', borderWidth: 3, borderColor: '#1B6CA8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
             {user?.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} className="w-full h-full" />
+              <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%' }} />
             ) : (
-              <Text className="text-5xl">👨‍🔧</Text>
+              <UserIcon size={40} color="#4A6785" />
             )}
             {uploadingAvatar && (
-              <View className="absolute inset-0 bg-black/30 items-center justify-center">
-                <ActivityIndicator color="white" />
+              <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator color="#fff" />
               </View>
             )}
           </View>
-          <View className="absolute bottom-0 right-0 bg-primary w-8 h-8 rounded-full items-center justify-center border-2 border-white">
-            <Text className="text-white text-xs">📷</Text>
+          <View style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: '#0F4C75', borderWidth: 2, borderColor: '#0D1B2A', alignItems: 'center', justifyContent: 'center' }}>
+            <CameraIcon size={13} color="#fff" />
           </View>
         </TouchableOpacity>
-        
-        <Text className="text-2xl font-bold text-slate-800 mt-4">{user?.name || 'Técnico'}</Text>
-        <Text className="text-slate-500">{user?.email}</Text>
-        <View className="bg-blue-100 px-3 py-1 rounded-full mt-2">
-          <Text className="text-blue-700 font-bold text-xs uppercase tracking-tighter">Staff Verificado</Text>
+
+        <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginTop: 12 }}>{user?.name || 'Técnico'}</Text>
+        <Text style={{ color: '#4A6785', fontSize: 13, marginTop: 2 }}>{user?.email}</Text>
+        <View className="flex-row items-center gap-1.5 mt-3 px-4 py-1.5 rounded-full" style={{ backgroundColor: '#0F4C75' + '40' }}>
+          <ShieldIcon size={13} color="#00B4D8" />
+          <Text style={{ color: '#00B4D8', fontWeight: '700', fontSize: 11, letterSpacing: 1 }}>STAFF VERIFICADO</Text>
         </View>
       </View>
 
-      <View className="flex-row justify-between items-center mb-4">
-        <Text className="text-lg font-bold text-slate-800">Documentación de Soporte</Text>
-        <Button 
-          title="+ Añadir" 
-          onPress={() => pickImage(false)} 
-          className="px-4 py-1.5" 
-          disabled={uploading}
-        />
-      </View>
+      {/* Info cards */}
+      <View style={{ marginTop: -20, marginHorizontal: 16, gap: 12 }}>
+        <View className="bg-surface-card rounded-2xl border border-surface-border px-4 py-4 flex-row items-center gap-3">
+          <View className="w-10 h-10 rounded-xl bg-brand/10 items-center justify-center" style={{ backgroundColor: '#E8F4FD' }}>
+            <MailIcon size={18} color="#0F4C75" />
+          </View>
+          <View>
+            <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>CORREO ELECTRÓNICO</Text>
+            <Text style={{ color: '#0D1B2A', fontSize: 14, fontWeight: '600', marginTop: 1 }}>{user?.email}</Text>
+          </View>
+        </View>
 
-      {uploading && (
-        <Card className="mb-4 items-center py-6 border-primary/20 bg-primary/5">
-          <ActivityIndicator color="#1E40AF" />
-          <Text className="text-primary mt-2 font-medium">Subiendo a la nube...</Text>
-        </Card>
-      )}
+        {/* Documents section */}
+        <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+          <View className="px-4 py-3.5 flex-row items-center justify-between border-b border-surface-border">
+            <View className="flex-row items-center gap-2">
+              <FileTextIcon size={16} color="#0F4C75" />
+              <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 14 }}>Documentación</Text>
+            </View>
+            <Button
+              title="Añadir"
+              size="sm"
+              icon={<PlusIcon size={12} color="#fff" />}
+              onPress={() => pickImage(false)}
+              loading={uploading}
+            />
+          </View>
 
-      {loadingDocs ? (
-        <ActivityIndicator size="small" color="#64748b" className="mt-4" />
-      ) : (
-        <View>
-          {documents.map((doc: any) => (
-            <Card key={doc.id} className="mb-3 flex-row items-center">
-              <View className="w-12 h-12 bg-slate-100 rounded-lg mr-4 items-center justify-center overflow-hidden border border-slate-200">
-                <Image source={{ uri: doc.url }} className="w-full h-full" resizeMode="cover" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-slate-800 font-bold" numberOfLines={1}>{doc.caption}</Text>
-                <Text className="text-slate-400 text-xs mt-1">{new Date(doc.created_at).toLocaleDateString()}</Text>
-              </View>
-              <View className="bg-green-100 px-2 py-0.5 rounded">
-                <Text className="text-green-700 font-bold text-[10px]">VERIFICADO</Text>
-              </View>
-            </Card>
-          ))}
-
-          {documents.length === 0 && !uploading && (
-            <View className="bg-white p-10 rounded-3xl border border-dashed border-slate-200 items-center">
-              <Text className="text-slate-400 text-center font-medium italic">Sin documentos cargados (CV, IDs, etc.)</Text>
+          {loadingDocs ? (
+            <View className="py-8 items-center">
+              <ActivityIndicator color="#0F4C75" />
+            </View>
+          ) : documents.length === 0 ? (
+            <View className="py-10 items-center gap-2 px-6">
+              <FileTextIcon size={28} color="#94a3b8" />
+              <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>
+                Sin documentos. Añade tu CV, certificaciones o IDs.
+              </Text>
+            </View>
+          ) : (
+            <View className="divide-y divide-surface-border">
+              {documents.map((doc: any) => (
+                <View key={doc.id} className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border">
+                  <View style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <Image source={{ uri: doc.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  </View>
+                  <View className="flex-1">
+                    <Text style={{ fontWeight: '600', color: '#0D1B2A', fontSize: 13 }} numberOfLines={1}>{doc.caption}</Text>
+                    <View className="flex-row items-center gap-1.5 mt-0.5">
+                      <CalendarIcon size={11} color="#94a3b8" />
+                      <Text style={{ color: '#94a3b8', fontSize: 11 }}>{new Date(doc.created_at).toLocaleDateString()}</Text>
+                    </View>
+                  </View>
+                  <View className="px-2 py-0.5 rounded bg-emerald-50">
+                    <Text style={{ color: '#059669', fontSize: 10, fontWeight: '700' }}>VERIFICADO</Text>
+                  </View>
+                </View>
+              ))}
             </View>
           )}
         </View>
-      )}
-
-      <View className="h-20" />
+      </View>
     </ScrollView>
   );
 }

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
-import { Card } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
+import { CalendarIcon, ChevronRightIcon, ClipboardIcon, PlusIcon } from '../../components/ui/Icons';
 
 export default function ClientHome() {
   const router = useRouter();
@@ -16,69 +16,99 @@ export default function ClientHome() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/orders?user_id=${user.id}&role=client`);
-      const data = await response.json();
-      if (data.success) {
-        setOrders(data.orders);
-      }
-    } catch (error) {
-      console.error('Fetch client orders error:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`/api/orders?user_id=${user.id}&role=client`);
+      const data = await res.json();
+      if (data.success) setOrders(data.orders);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, [user?.id]);
+  useEffect(() => { fetchOrders(); }, [user?.id]);
+
+  const firstName = user?.name?.split(' ')[0] || 'Cliente';
 
   return (
-    <View className="flex-1 bg-slate-50 p-4">
-      <View className="flex-row justify-between items-center mb-6 mt-2">
-        <View>
-          <Text className="text-2xl font-bold text-slate-800">Hola, {user?.name?.split(' ')[0]}</Text>
-          <Text className="text-slate-500">Tus solicitudes de servicio</Text>
+    <View className="flex-1 bg-surface">
+      {/* Welcome header */}
+      <View className="bg-ink px-5 py-5">
+        <Text style={{ color: '#4A6785', fontSize: 12, fontWeight: '700', letterSpacing: 1 }}>BIENVENIDO DE NUEVO</Text>
+        <View className="flex-row items-center justify-between mt-1">
+          <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '800' }}>Hola, {firstName}</Text>
+          <Button
+            title="Nueva solicitud"
+            size="sm"
+            icon={<PlusIcon size={14} color="#fff" />}
+            onPress={() => router.push('/(client)/new-request')}
+          />
         </View>
-        <Button 
-          title="+ Nuevo" 
-          onPress={() => router.push('/(client)/new-request')} 
-          className="px-4 py-2"
-        />
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1E40AF" className="mt-10" />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#0F4C75" />
+        </View>
       ) : (
         <FlatList
           data={orders}
           keyExtractor={item => item.id}
           onRefresh={fetchOrders}
           refreshing={loading}
+          contentContainerStyle={{ padding: 16, gap: 10 }}
+          ListHeaderComponent={
+            orders.length > 0 ? (
+              <Text style={{ color: '#64748b', fontSize: 13, fontWeight: '600', marginBottom: 4 }}>
+                {orders.length} solicitud{orders.length !== 1 ? 'es' : ''} encontrada{orders.length !== 1 ? 's' : ''}
+              </Text>
+            ) : null
+          }
           renderItem={({ item }) => (
-            <TouchableOpacity 
-              className="mb-4" 
+            <TouchableOpacity
+              activeOpacity={0.85}
               onPress={() => router.push(`/(client)/service/${item.id}`)}
             >
-              <Card>
-                <View className="flex-row justify-between items-start mb-2">
-                  <Text className="text-lg font-bold text-slate-800 flex-1 mr-2">{item.service_type}</Text>
+              <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
+                <View className="px-4 pt-4 pb-3 flex-row items-start justify-between border-b border-surface-border">
+                  <View className="flex-1 mr-3">
+                    <Text style={{ fontWeight: '700', color: '#0D1B2A', fontSize: 15 }} numberOfLines={1}>
+                      {item.service_type}
+                    </Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 1 }}>#{item.order_number || item.id?.slice(0, 8)}</Text>
+                  </View>
                   <StatusBadge status={item.status} />
                 </View>
-                <Text className="text-slate-500 mb-2" numberOfLines={2}>{item.description}</Text>
-                <View className="flex-row justify-between items-center mt-2 pt-2 border-t border-slate-50">
-                  <Text className="text-slate-400 text-xs">📅 {new Date(item.created_at).toLocaleDateString()}</Text>
-                  <Text className="text-primary font-medium text-xs">Ver detalle →</Text>
+                <View className="px-4 py-3 flex-row items-center justify-between">
+                  <Text style={{ color: '#64748b', fontSize: 13, flex: 1, lineHeight: 18 }} numberOfLines={2}>
+                    {item.description}
+                  </Text>
                 </View>
-              </Card>
+                <View className="px-4 pb-3 flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-1.5">
+                    <CalendarIcon size={13} color="#94a3b8" />
+                    <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                      {new Date(item.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <Text style={{ color: '#0F4C75', fontWeight: '700', fontSize: 12 }}>Ver detalle</Text>
+                    <ChevronRightIcon size={14} color="#0F4C75" />
+                  </View>
+                </View>
+              </View>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <View className="bg-white p-10 rounded-3xl border border-dashed border-slate-200 items-center mt-4">
-              <Text className="text-slate-400 text-center font-medium">No tienes órdenes activas.</Text>
-              <Button 
-                title="Crear mi primera orden" 
-                variant="outline" 
-                className="mt-4" 
+            <View className="items-center py-20 gap-4">
+              <View className="w-20 h-20 rounded-2xl bg-surface-hover items-center justify-center">
+                <ClipboardIcon size={32} color="#94a3b8" />
+              </View>
+              <View className="items-center gap-1">
+                <Text style={{ color: '#0D1B2A', fontWeight: '700', fontSize: 16 }}>Sin solicitudes aún</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 13 }}>Crea tu primera orden de servicio</Text>
+              </View>
+              <Button
+                title="Crear solicitud"
+                variant="outline"
+                size="sm"
                 onPress={() => router.push('/(client)/new-request')}
               />
             </View>

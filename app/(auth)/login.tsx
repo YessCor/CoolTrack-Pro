@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth, Role } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { AirVentIcon, MailIcon, GoogleIcon } from '../../components/ui/Icons';
 
 export default function Login() {
   const { login, loading } = useAuth();
@@ -11,67 +12,90 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleRealLogin = () => {
-    login(email, password);
-  };
-
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-slate-50 p-6 pt-12">
-      <View className="items-center mb-8 mt-4">
-        <Text className="text-4xl font-bold text-primary mb-2">CoolTrack-Pro</Text>
-        <Text className="text-base text-secondary text-center">Gestión Profesional HVAC</Text>
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      className="bg-ink"
+      keyboardShouldPersistTaps="handled"
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#0D1B2A" />
+
+      {/* Header hero */}
+      <View className="bg-ink px-8 pt-16 pb-10 items-center">
+        <View className="w-16 h-16 rounded-2xl bg-brand items-center justify-center mb-5" style={{ shadowColor: '#00B4D8', shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 }}>
+          <AirVentIcon size={32} color="#FFFFFF" />
+        </View>
+        <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 }}>
+          CoolTrack Pro
+        </Text>
+        <Text style={{ color: '#4A6785', fontSize: 14, fontWeight: '500', letterSpacing: 0.5 }}>
+          GESTIÓN PROFESIONAL HVAC
+        </Text>
       </View>
 
-      <View className="w-full bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-8">
-        <Text className="text-xl font-bold text-slate-800 mb-6">Iniciar Sesión</Text>
-        
-        <Input 
-          label="Correo Electrónico" 
-          placeholder="ejemplo@correo.com" 
-          keyboardType="email-address" 
+      {/* Form card */}
+      <View className="flex-1 bg-surface rounded-t-3xl px-6 pt-8 pb-10">
+        <Text style={{ color: '#0D1B2A', fontSize: 22, fontWeight: '700', marginBottom: 24 }}>
+          Iniciar sesión
+        </Text>
+
+        <Input
+          label="Correo electrónico"
+          placeholder="usuario@empresa.com"
+          keyboardType="email-address"
           autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
+          leftIcon={<MailIcon size={16} color="#94a3b8" />}
         />
-        
-        <Input 
-          label="Contraseña" 
-          placeholder="••••••••" 
-          secureTextEntry 
+
+        <Input
+          label="Contraseña"
+          placeholder="••••••••"
+          secureTextEntry
           value={password}
           onChangeText={setPassword}
         />
 
-        <View className="items-end mb-6">
-          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
-            <Text className="text-primary font-medium">¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/(auth)/forgot-password')}
+          className="items-end mb-6 -mt-2"
+        >
+          <Text style={{ color: '#1B6CA8', fontWeight: '600', fontSize: 13 }}>
+            ¿Olvidaste tu contraseña?
+          </Text>
+        </TouchableOpacity>
 
-        <Button 
-          title={loading ? "Entrando..." : "Entrar"} 
-          onPress={handleRealLogin} 
-          disabled={loading}
-          className="mb-3"
+        <Button
+          title={loading ? 'Ingresando...' : 'Ingresar'}
+          loading={loading}
+          onPress={() => login(email, password)}
+          size="lg"
+          className="mb-4 w-full"
         />
 
-        <View className="flex-row items-center my-6">
-          <View className="flex-1 h-[1px] bg-slate-200" />
-          <Text className="mx-4 text-slate-400 font-medium">O</Text>
-          <View className="flex-1 h-[1px] bg-slate-200" />
+        <View className="flex-row items-center my-5">
+          <View className="flex-1 h-px bg-surface-border" />
+          <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '600', marginHorizontal: 12 }}>O</Text>
+          <View className="flex-1 h-px bg-surface-border" />
         </View>
 
-        <TouchableOpacity className="flex-row items-center justify-center bg-white border border-slate-200 py-3 rounded-xl shadow-sm mb-4">
-          <Text className="text-lg mr-2">Ⓜ️ </Text>
-          <Text className="text-slate-700 font-semibold text-lg">Continuar con Google</Text>
+        <TouchableOpacity
+          className="flex-row items-center justify-center bg-surface-card border border-surface-border py-3.5 rounded-xl"
+          style={{ gap: 10 }}
+        >
+          <GoogleIcon size={20} />
+          <Text style={{ color: '#0D1B2A', fontWeight: '600', fontSize: 15 }}>
+            Continuar con Google
+          </Text>
         </TouchableOpacity>
-      </View>
 
-      <View className="flex-row justify-center pb-8">
-        <Text className="text-slate-600">¿No tienes una cuenta? </Text>
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-          <Text className="text-primary font-bold">Regístrate</Text>
-        </TouchableOpacity>
+        <View className="flex-row justify-center mt-8">
+          <Text style={{ color: '#64748b', fontSize: 14 }}>¿No tienes cuenta? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+            <Text style={{ color: '#0F4C75', fontWeight: '700', fontSize: 14 }}>Regístrate</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );

@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
-import { Card } from '../../components/ui/Card';
+import { View, Text, ScrollView, RefreshControl } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { apiCall } from '../../lib/api';
+import { BarChartIcon, ClipboardIcon, AlertTriangleIcon, CheckCircleIcon, MapPinIcon } from '../../components/ui/Icons';
+
+function StatCard({ label, value, icon, accent, sub }: { label: string; value: number | string; icon: React.ReactNode; accent: string; sub?: string }) {
+  return (
+    <View className="flex-1 bg-surface-card rounded-2xl p-4 border border-surface-border" style={{ minWidth: 0 }}>
+      <View className="w-10 h-10 rounded-xl items-center justify-center mb-3" style={{ backgroundColor: accent + '18' }}>
+        {icon}
+      </View>
+      <Text style={{ fontSize: 28, fontWeight: '800', color: '#0D1B2A', lineHeight: 32 }}>{value}</Text>
+      <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748b', marginTop: 2 }}>{label}</Text>
+      {sub && <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{sub}</Text>}
+    </View>
+  );
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -14,55 +27,60 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const { success, data, error } = await apiCall<{ stats: any }>(`/api/admin/stats?user_id=${user.id}&role=${user.role}`);
-      if (success && data) {
-        setStats(data.stats);
-      } else {
-        console.error('[ADMIN-DASH] Fetch error:', error);
-      }
-    } catch (error) {
-      console.error('Fetch admin stats error:', error);
-    } finally {
-      setLoading(false);
-    }
+      if (success && data) setStats(data.stats);
+      else console.error('[ADMIN-DASH] error:', error);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchStats(); }, []);
 
   return (
-    <ScrollView 
-      className="flex-1 bg-slate-50 p-4"
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={fetchStats} colors={["#1E40AF"]} />
-      }
+    <ScrollView
+      className="flex-1 bg-surface"
+      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchStats} colors={['#0F4C75']} tintColor="#0F4C75" />}
     >
-      <Text className="text-2xl font-bold text-slate-800 mb-6 mt-2">Métricas del Día</Text>
-      
-      <View className="flex-row gap-4 mb-6">
-        <Card className="flex-1 bg-primary border-0 shadow-md">
-          <Text className="text-white/80 font-medium">Asignadas</Text>
-          <Text className="text-4xl font-bold text-white mt-1">{stats.assigned}</Text>
-        </Card>
-        <Card className="flex-1 bg-status-completed border-0 shadow-md">
-          <Text className="text-white/80 font-medium">Completadas</Text>
-          <Text className="text-4xl font-bold text-white mt-1">{stats.completed}</Text>
-        </Card>
+      {/* Welcome strip */}
+      <View className="bg-ink rounded-2xl px-5 py-4 mb-5 flex-row items-center justify-between">
+        <View>
+          <Text style={{ color: '#4A6785', fontSize: 11, fontWeight: '700', letterSpacing: 1.2 }}>PANEL ADMINISTRATIVO</Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginTop: 2 }}>Métricas del día</Text>
+        </View>
+        <View className="w-10 h-10 rounded-xl bg-brand items-center justify-center">
+          <BarChartIcon size={20} color="#fff" />
+        </View>
       </View>
 
-      <Card className="mb-6 items-center py-6 border-slate-100 shadow-sm">
-        <Text className="text-status-pending font-bold text-center mb-1 uppercase text-xs tracking-widest">Alertas Críticas</Text>
-        <Text className="text-slate-800 text-3xl font-bold mb-1">{stats.alerts}</Text>
-        <Text className="text-slate-500 text-center text-sm">Órdenes sin atención inmediata detectadas</Text>
-      </Card>
-
-      <Text className="text-xl font-bold text-slate-800 mb-4">Ubicación de Staff (Live)</Text>
-      <View className="h-48 bg-slate-200 rounded-3xl items-center justify-center shadow-inner border border-slate-100">
-        <Text className="text-slate-500 font-bold">🌐 Mapa en tiempo real (Mock)</Text>
-        <Text className="text-slate-400 text-xs mt-1">Requiere Google Maps API Key</Text>
+      {/* KPI row */}
+      <View className="flex-row gap-3 mb-3">
+        <StatCard label="Asignadas" value={stats.assigned} icon={<ClipboardIcon size={20} color="#1B6CA8" />} accent="#1B6CA8" sub="Órdenes activas" />
+        <StatCard label="Completadas" value={stats.completed} icon={<CheckCircleIcon size={20} color="#10B981" />} accent="#10B981" sub="Hoy" />
       </View>
-      
-      <View className="h-20" />
+
+      {/* Alerts */}
+      <View className="bg-surface-card rounded-2xl p-4 border mb-5 flex-row items-center gap-4" style={{ borderColor: stats.alerts > 0 ? '#F59E0B40' : '#E2E8F0' }}>
+        <View className="w-12 h-12 rounded-xl bg-amber-50 items-center justify-center">
+          <AlertTriangleIcon size={22} color="#F59E0B" />
+        </View>
+        <View className="flex-1">
+          <Text style={{ color: '#0D1B2A', fontSize: 22, fontWeight: '800' }}>{stats.alerts}</Text>
+          <Text style={{ color: '#64748b', fontSize: 13, fontWeight: '600' }}>Alertas críticas</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 1 }}>Órdenes sin atención detectadas</Text>
+        </View>
+      </View>
+
+      {/* Map */}
+      <Text style={{ color: '#0D1B2A', fontSize: 16, fontWeight: '700', marginBottom: 12 }}>Ubicación en tiempo real</Text>
+      <View className="rounded-2xl overflow-hidden border border-surface-border" style={{ height: 200, backgroundColor: '#EEF2F7' }}>
+        <View className="flex-1 items-center justify-center gap-3">
+          <View className="w-14 h-14 rounded-2xl items-center justify-center" style={{ backgroundColor: '#E8F4FD' }}>
+            <MapPinIcon size={26} color="#0F4C75" />
+          </View>
+          <Text style={{ color: '#64748b', fontWeight: '600', fontSize: 14 }}>Mapa en tiempo real</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 12 }}>Requiere Google Maps API Key</Text>
+        </View>
+      </View>
     </ScrollView>
   );
 }
