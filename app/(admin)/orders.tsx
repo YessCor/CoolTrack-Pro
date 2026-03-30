@@ -27,6 +27,7 @@ export default function AdminOrders() {
   const [showModal, setShowModal] = useState(false);
 
   const fetchData = async () => {
+    if (!user) return;
     setLoading(true);
     try {
       const [oRes, tRes] = await Promise.all([
@@ -45,8 +46,8 @@ export default function AdminOrders() {
   const handleAssign = async (techId: string) => {
     if (!assigningId) return;
     try {
-      const res = await fetch('/api/admin/technicians', {
-        method: 'PATCH',
+      const res = await fetch('/api/assign-order', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: assigningId, technician_id: techId }),
       });
