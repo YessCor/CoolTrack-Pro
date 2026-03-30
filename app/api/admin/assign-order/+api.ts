@@ -4,14 +4,11 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/api';
 export async function PATCH(request: Request) {
   try {
     const { order_id, technician_id } = await request.json();
-    
-    console.log('[ASSIGN-ORDER] Inciando asignación:', { order_id, technician_id });
 
     if (!order_id || !technician_id) {
       return createErrorResponse('Order ID y Technician ID requeridos', 400);
     }
 
-    // Actualizar la orden con el técnico asignado
     const updatedOrder = await sql`
       UPDATE service_orders 
       SET technician_id = ${technician_id}::uuid, 
@@ -25,11 +22,10 @@ export async function PATCH(request: Request) {
       return createErrorResponse('Orden no encontrada o ID inválido', 404);
     }
 
-    console.log('[ASSIGN-ORDER] Orden asignada con éxito:', order_id);
     return createSuccessResponse({ order: updatedOrder[0] });
 
   } catch (error: any) {
-    console.error('[ASSIGN-ORDER] FATAL ERROR:', error.message);
-    return createErrorResponse('Error de base de datos al asignar técnico.', 500);
+    console.error('[PATCH /api/admin/assign-order]', error.message);
+    return createErrorResponse('Error al asignar técnico', 500);
   }
 }

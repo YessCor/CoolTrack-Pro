@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../context/AuthContext';
 import { UserIcon, ClipboardIcon, AirVentIcon, ChevronRightIcon, PhoneIcon } from '../../components/ui/Icons';
 
 const EQUIPMENT_TYPES: Record<string, string> = {
@@ -13,24 +14,39 @@ const EQUIPMENT_TYPES: Record<string, string> = {
 };
 
 export default function AdminClients() {
+  const { user } = useAuth();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchClients = async () => {
+    if (!user?.id) return;
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/admin/clients');
+      const res = await fetch(`/api/admin/clients?user_id=${user.id}&role=${user.role}`);
       const data = await res.json();
-      if (data.success) setClients(data.clients);
-    } catch (e) { console.error(e); }
+      console.log('[AdminClients] Response:', data);
+      if (data.success) {
+        setClients(data.clients || []);
+      } else {
+        setError(data.error || 'Error desconocido');
+      }
+    } catch (e) { console.error(e); setError(String(e)); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchClients(); }, []);
+  useEffect(() => { fetchClients(); }, [user]);
 
   if (loading) return (
     <View className="flex-1 bg-surface items-center justify-center">
       <ActivityIndicator size="large" color="#0F4C75" />
+    </View>
+  );
+
+  if (error) return (
+    <View className="flex-1 bg-surface items-center justify-center p-4">
+      <Text style={{ color: '#ef4444', textAlign: 'center' }}>Error: {error}</Text>
     </View>
   );
 

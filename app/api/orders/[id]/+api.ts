@@ -64,9 +64,6 @@ export async function PATCH(request: Request, context: any) {
       return Response.json({ success: false, error: 'El campo "status" es obligatorio' }, { status: 400 });
     }
 
-    console.log(`[API] Intentando actualizar orden ${id} a estado: ${status}`);
-
-    // 3. Actualización con casting de seguridad
     const updated = await sql`
       UPDATE service_orders 
       SET status = ${status}::order_status, 

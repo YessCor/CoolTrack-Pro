@@ -85,6 +85,7 @@ export const authConfig: NextAuthConfig = {
       return session;
     },
   },
+  trustHost: true,
   pages: {
     signIn: '/auth/login',
     error: '/auth/error',

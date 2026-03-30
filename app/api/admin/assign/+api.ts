@@ -4,14 +4,11 @@ import { ORDER_STATUS } from '@/lib/order-status';
 export async function POST(request: Request) {
   try {
     const { order_id, technician_id } = await request.json();
-    
-    console.log('API-ASSIGN - Payload:', { order_id, technician_id });
 
     if (!order_id || !technician_id) {
       return Response.json({ success: false, error: 'Order ID y Technician ID requeridos' }, { status: 400 });
     }
 
-    // Actualizar la orden con el técnico asignado
     const updatedOrder = await sql`
       UPDATE service_orders 
       SET technician_id = ${technician_id}, 
@@ -27,14 +24,7 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true, order: updatedOrder[0] });
   } catch (error: any) {
-    console.error('API-ASSIGN - CRITICAL error:', {
-      message: error.message,
-      detail: error.detail
-    });
-    return Response.json({ 
-      success: false, 
-      error: 'Error de base de datos al asignar técnico.',
-      debug: error.message 
-    }, { status: 500 });
+    console.error('[POST /api/admin/assign]', error.message);
+    return Response.json({ success: false, error: 'Error al asignar técnico' }, { status: 500 });
   }
 }

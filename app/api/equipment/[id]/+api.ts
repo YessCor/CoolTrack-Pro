@@ -27,9 +27,6 @@ export async function PUT(request: Request, context: any) {
   try {
     const id = context?.params?.id || new URL(request.url).pathname.split('/').pop();
 
-    console.log('[PUT /api/equipment] ID extracted:', id);
-    console.log('[PUT /api/equipment] URL:', request.url);
-
     if (!id) {
       return Response.json({ success: false, error: 'ID requerido' }, { status: 400 });
     }
@@ -37,9 +34,7 @@ export async function PUT(request: Request, context: any) {
     let body;
     try {
       body = await request.json();
-      console.log('[PUT /api/equipment] Body:', body);
     } catch (e) {
-      console.error('[PUT /api/equipment] JSON parse error:', e);
       return Response.json({ success: false, error: 'Cuerpo inválido' }, { status: 400 });
     }
 
@@ -79,10 +74,8 @@ export async function PUT(request: Request, context: any) {
 
     return Response.json({ success: true, equipment: updated[0] });
   } catch (error: any) {
-    console.error('[PUT /api/equipment/[id]] Full error:', error);
-    console.error('[PUT /api/equipment/[id]] Error message:', error.message);
-    console.error('[PUT /api/equipment/[id]] Error code:', error.code);
-    return Response.json({ success: false, error: 'Error al actualizar equipo', details: error.message }, { status: 500 });
+    console.error('[PUT /api/equipment/[id]]', error.message);
+    return Response.json({ success: false, error: 'Error al actualizar equipo' }, { status: 500 });
   }
 }
 

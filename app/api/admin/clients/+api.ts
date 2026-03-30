@@ -1,24 +1,21 @@
 
-import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
+import { createSuccessResponse, createErrorResponse } from '@/lib/api'
 
 export async function GET(request: Request) {
   try {
-    let session;
-    try {
-      session = await auth()
-    } catch (authError) {
-      console.error('[GET /api/admin/clients] Auth error:', authError)
-      return Response.json({ error: 'Authentication failed', detail: String(authError) }, { status: 500 })
+    const url = new URL(request.url)
+    const userId = url.searchParams.get('user_id')
+    const role = url.searchParams.get('role')
+
+    if (!userId || !role) {
+      return createErrorResponse('user_id y role son requeridos', 400)
     }
 
-    console.log('[GET /api/admin/clients] Session:', JSON.stringify(session))
-
-    if (!session?.user || session.user.role !== 'admin') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    if (role !== 'admin') {
+      return createErrorResponse('Solo admins pueden ver clientes', 403)
     }
 
-    console.log('[GET /api/admin/clients] Executing SQL query...')
     const clients = await sql`
       SELECT 
         u.id, u.email, u.name, u.phone, u.address, u.is_active, u.created_at,
@@ -35,14 +32,10 @@ export async function GET(request: Request) {
       GROUP BY u.id
       ORDER BY u.created_at DESC
     `
-    console.log('[GET /api/admin/clients] Query successful, clients count:', clients.length)
 
-    return Response.json({ success: true, clients })
-  } catch (error) {
-    console.error('Error fetching clients:', error)
-    return Response.json(
-      { success: false, error: 'Failed to fetch clients' },
-      { status: 500 }
-    )
+    return createSuccessResponse({ clients })
+  } catch (error: any) {
+    console.error('[GET /api/admin/clients]', error.message)
+    return createErrorResponse('Error al obtener clientes', 500)
   }
 }

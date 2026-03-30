@@ -33,7 +33,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  console.log('>>> [POST /api/quotes] START');
   try {
     const url = new URL(request.url);
     const user_id = url.searchParams.get('user_id');
@@ -45,7 +44,6 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     
-    // --- 1. DTO MAPPING (CLEAN DATA ONLY) ---
     const { order_id, client_id, items, notes, valid_until } = body;
 
     if (!client_id || !items || !Array.isArray(items) || items.length === 0) {
@@ -58,8 +56,6 @@ export async function POST(request: Request) {
     const taxAmount = Number((subtotal * tax_rate).toFixed(2));
     const total = Number((subtotal + taxAmount).toFixed(2));
 
-    // --- 2. DATABASE INSERTION (RAW DATA ONLY) ---
-    console.log('[API] Inserting raw quote header...');
     const result = await sql`
       INSERT INTO quotes (
         order_id, client_id, technician_id, 
@@ -85,7 +81,6 @@ export async function POST(request: Request) {
 
     const quoteId = result[0].id;
 
-    // --- 3. ITEMS INSERTION ---
     for (const item of items) {
       await sql`
         INSERT INTO quote_items (
@@ -96,15 +91,12 @@ export async function POST(request: Request) {
       `;
     }
 
-    // --- 4. DATA ENHANCEMENT (UI READY ONLY) ---
-    // We use the immutable enhanceQuote to add display_quote_number
     const enhancedQuote = enhanceQuote(result[0] as any);
     
-    console.log('[API] Quote created successfully:', enhancedQuote.display_quote_number);
     return createSuccessResponse({ data: enhancedQuote });
 
   } catch (error: any) {
-    console.error('>>> [POST /api/quotes] FATAL ERROR:', error.message);
+    console.error('[POST /api/quotes] FATAL ERROR:', error.message);
     return createErrorResponse(
       'Error interno al crear la cotización', 
       500, 

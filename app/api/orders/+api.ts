@@ -65,7 +65,6 @@ export async function POST(request: Request) {
     // ── ACTUALIZAR ESTADO ──────────────────────
     if (orderId) {
       const { status, notes } = body;
-      console.log(`[ORDER-UPDATE] Solicitud para orden ${orderId} -> ${status}`);
 
       if (!status) {
         return createErrorResponse('El campo status es requerido', 400);
@@ -77,9 +76,6 @@ export async function POST(request: Request) {
         return createErrorResponse(`Estado inválido: "${status}".`, 400);
       }
 
-      // --- GUARDIA DE FLUJO: Cotización Aprobada ---
-      // Si el técnico intenta marcar como 'in_progress' o 'completed',
-      // debe haber al menos una cotización aprobada para esta orden.
       if (normalizedStatus === 'in_progress' || normalizedStatus === 'completed') {
         const approvedQuotes = await sql`
           SELECT id FROM quotes 
@@ -88,7 +84,6 @@ export async function POST(request: Request) {
         `;
 
         if (approvedQuotes.length === 0) {
-          console.log(`[ORDER-UPDATE] BLOQUEADO: Intento de ${normalizedStatus} sin cotización aprobada (Orden: ${orderId})`);
           return createErrorResponse(
             '⚠️ No se puede iniciar el trabajo sin una cotización aprobada por el cliente.',
             403
@@ -115,9 +110,6 @@ export async function POST(request: Request) {
 
     // ── CREAR ORDEN ────────────────────────────
     const { client_id, equipment_id, service_type, description, address, priority } = body;
-    console.log('[ORDER-CREATE] Nueva solicitud de orden recibida para cliente:', client_id);
-    console.log('[ORDER-CREATE] Body completo:', JSON.stringify(body));
-    console.log('[ORDER-CREATE] equipment_id:', equipment_id, 'tipo:', typeof equipment_id);
 
     if (!client_id || !description || !address) {
       return createErrorResponse('client_id, description y address son requeridos', 400);
@@ -145,9 +137,7 @@ export async function POST(request: Request) {
     return createSuccessResponse({ order: newOrder[0] }, 201);
 
   } catch (error: any) {
-    console.error('[POST /api/orders] FATAL ERROR:', error);
-    console.error('[POST /api/orders] Error code:', error.code);
-    console.error('[POST /api/orders] Error columns:', error.columns);
+    console.error('[POST /api/orders] FATAL ERROR:', error.message);
     return createErrorResponse('Error interno del servidor: ' + error.message, 500);
   }
 }
