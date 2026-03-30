@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 export type Role = 'client' | 'technician' | 'admin' | null;
 
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function checkPersistedAuth() {
       try {
-        const storedUser = await AsyncStorage.getItem('@cooltrack_user');
+        const storedUser = await SecureStore.getItemAsync('@cooltrack_user');
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
         
         // Guardar sesión para persistencia
-        await AsyncStorage.setItem('@cooltrack_user', JSON.stringify(data.user));
+        await SecureStore.setItemAsync('@cooltrack_user', JSON.stringify(data.user));
       } else {
         Alert.alert('Error', data.error || 'Credenciales inválidas');
       }
@@ -80,14 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setRole(null);
     setUser(null);
-    await AsyncStorage.removeItem('@cooltrack_user');
+    await SecureStore.deleteItemAsync('@cooltrack_user');
   };
 
   const updateUser = async (newData: Partial<User>) => {
     setUser(prev => {
       if (!prev) return null;
       const updated = { ...prev, ...newData };
-      AsyncStorage.setItem('@cooltrack_user', JSON.stringify(updated)).catch(console.error);
+      SecureStore.setItemAsync('@cooltrack_user', JSON.stringify(updated)).catch(console.error);
       return updated;
     });
   };
