@@ -1,6 +1,30 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+
+// Helper multiplataforma: localStorage en web, SecureStore en nativo
+const storage = {
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    await SecureStore.setItemAsync(key, value);
+  },
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+      return;
+    }
+    await SecureStore.deleteItemAsync(key);
+  },
+};
 
 export type Role = 'client' | 'technician' | 'admin' | null;
 
@@ -34,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function checkPersistedAuth() {
       try {
-        const storedUser = await SecureStore.getItemAsync('@cooltrack_user');
+        const storedUser = await storage.getItem('cooltrack_user');
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
@@ -65,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
         
         // Guardar sesión para persistencia
-        await SecureStore.setItemAsync('@cooltrack_user', JSON.stringify(data.user));
+        await storage.setItem('cooltrack_user', JSON.stringify(data.user));
       } else {
         Alert.alert('Error', data.error || 'Credenciales inválidas');
       }
@@ -80,14 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setRole(null);
     setUser(null);
-    await SecureStore.deleteItemAsync('@cooltrack_user');
+    await storage.removeItem('cooltrack_user');
   };
 
   const updateUser = async (newData: Partial<User>) => {
     setUser(prev => {
       if (!prev) return null;
       const updated = { ...prev, ...newData };
-      SecureStore.setItemAsync('@cooltrack_user', JSON.stringify(updated)).catch(console.error);
+      storage.setItem('cooltrack_user', JSON.stringify(updated)).catch(console.error);
       return updated;
     });
   };

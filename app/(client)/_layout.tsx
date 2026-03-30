@@ -2,21 +2,12 @@ import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { TouchableOpacity, View, Text, Platform } from 'react-native';
 import { HomeIcon, ClipboardIcon, LayersIcon, LogOutIcon, AirVentIcon } from '../../components/ui/Icons';
+import { AnimatedTabIcon } from '../../components/ui/AnimatedTabIcon';
 
-function TabIcon({ icon, focused }: { icon: React.ReactNode; focused: boolean }) {
-  return (
-    <View style={{
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 48,
-      height: 48,
-      borderRadius: 16,
-      backgroundColor: focused ? '#0F4C75' : 'transparent',
-    }}>
-      {icon}
-    </View>
-  );
-}
+const ICON_ACTIVE = '#00B4D8';
+const ICON_INACTIVE = '#6BAED6';
+
+
 
 export default function ClientLayout() {
   const { logout } = useAuth();
@@ -37,8 +28,8 @@ export default function ClientLayout() {
           elevation: 0,
           shadowOpacity: 0,
         },
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#4A6785',
+        tabBarActiveTintColor: ICON_ACTIVE,
+        tabBarInactiveTintColor: ICON_INACTIVE,
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.5, marginTop: 2 },
         headerLeft: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 8 }}>
@@ -65,7 +56,7 @@ export default function ClientLayout() {
           title: 'Inicio',
           headerTitle: 'Mis Solicitudes',
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={<HomeIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />
+            <AnimatedTabIcon focused={focused} icon={<HomeIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />
           ),
         }}
       />
@@ -75,7 +66,7 @@ export default function ClientLayout() {
           title: 'Equipos',
           headerTitle: 'Mis Equipos',
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={<LayersIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />
+            <AnimatedTabIcon focused={focused} icon={<LayersIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />
           ),
         }}
       />

@@ -1,25 +1,16 @@
 import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { TouchableOpacity, View, Text, Platform } from 'react-native';
+import { AnimatedTabIcon } from '../../components/ui/AnimatedTabIcon';
+
 import {
   BarChartIcon, ClipboardIcon, UsersIcon,
   LogOutIcon, AirVentIcon, FileTextIcon, WrenchIcon,
 } from '../../components/ui/Icons';
 
-function TabIcon({ icon, focused }: { icon: React.ReactNode; focused: boolean }) {
-  return (
-    <View style={{
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 48,
-      height: 48,
-      borderRadius: 16,
-      backgroundColor: focused ? '#0F4C75' : 'transparent',
-    }}>
-      {icon}
-    </View>
-  );
-}
+// Colores de la paleta
+const ICON_ACTIVE = '#00B4D8';   // cian brillante
+const ICON_INACTIVE = '#6BAED6'; // azul claro visible
 
 export default function AdminLayout() {
   const { logout } = useAuth();
@@ -38,8 +29,8 @@ export default function AdminLayout() {
       elevation: 0,
       shadowOpacity: 0,
     },
-    tabBarActiveTintColor: '#FFFFFF',
-    tabBarInactiveTintColor: '#4A6785',
+    tabBarActiveTintColor: ICON_ACTIVE,
+    tabBarInactiveTintColor: ICON_INACTIVE,
     tabBarLabelStyle: { fontSize: 10, fontWeight: '600' as const, letterSpacing: 0.5, marginTop: 2 },
     headerLeft: () => (
       <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 8 }}>
@@ -60,35 +51,35 @@ export default function AdminLayout() {
         name="index"
         options={{
           title: 'Dashboard', headerTitle: 'Panel General',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={<BarChartIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />,
+          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<BarChartIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
           title: 'Órdenes', headerTitle: 'Monitor de Operaciones',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={<ClipboardIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />,
+          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<ClipboardIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen
         name="quotes"
         options={{
           title: 'Cotizaciones', headerTitle: 'Gestión Comercial',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={<FileTextIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />,
+          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<FileTextIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen
         name="technicians"
         options={{
           title: 'Staff', headerTitle: 'Directorio de Técnicos',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={<WrenchIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />,
+          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<WrenchIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen
         name="clients"
         options={{
           title: 'Clientes', headerTitle: 'Base de Clientes',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={<UsersIcon size={20} color={focused ? '#fff' : '#4A6785'} />} />,
+          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<UsersIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen
