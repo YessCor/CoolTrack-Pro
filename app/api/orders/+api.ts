@@ -116,18 +116,23 @@ export async function POST(request: Request) {
     // ── CREAR ORDEN ────────────────────────────
     const { client_id, equipment_id, service_type, description, address, priority } = body;
     console.log('[ORDER-CREATE] Nueva solicitud de orden recibida para cliente:', client_id);
+    console.log('[ORDER-CREATE] Body completo:', JSON.stringify(body));
+    console.log('[ORDER-CREATE] equipment_id:', equipment_id, 'tipo:', typeof equipment_id);
 
     if (!client_id || !description || !address) {
       return createErrorResponse('client_id, description y address son requeridos', 400);
     }
+
+    const sanitizedClientId = String(client_id).replace(/::uuid$/, '');
+    const sanitizedEquipmentId = equipment_id ? String(equipment_id).replace(/::uuid$/, '') : null;
 
     const newOrder = await sql`
       INSERT INTO service_orders
         (client_id, equipment_id, service_type, description, address, priority, status)
       VALUES
         (
-          ${client_id}::uuid,
-          ${equipment_id ? equipment_id + '::uuid' : null},
+          ${sanitizedClientId}::uuid,
+          ${sanitizedEquipmentId ? sanitizedEquipmentId : null},
           ${service_type ?? 'General'},
           ${description},
           ${address},
@@ -140,7 +145,9 @@ export async function POST(request: Request) {
     return createSuccessResponse({ order: newOrder[0] }, 201);
 
   } catch (error: any) {
-    console.error('[POST /api/orders] FATAL ERROR:', error.message);
-    return createErrorResponse('Error interno del servidor', 500);
+    console.error('[POST /api/orders] FATAL ERROR:', error);
+    console.error('[POST /api/orders] Error code:', error.code);
+    console.error('[POST /api/orders] Error columns:', error.columns);
+    return createErrorResponse('Error interno del servidor: ' + error.message, 500);
   }
 }

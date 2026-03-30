@@ -1,16 +1,24 @@
 
-import { getServerSession } from 'next-auth/next'
-import { authConfig } from '@/lib/auth-config'
+import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authConfig)
+    let session;
+    try {
+      session = await auth()
+    } catch (authError) {
+      console.error('[GET /api/admin/clients] Auth error:', authError)
+      return Response.json({ error: 'Authentication failed', detail: String(authError) }, { status: 500 })
+    }
+
+    console.log('[GET /api/admin/clients] Session:', JSON.stringify(session))
 
     if (!session?.user || session.user.role !== 'admin') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('[GET /api/admin/clients] Executing SQL query...')
     const clients = await sql`
       SELECT 
         u.id, u.email, u.name, u.phone, u.address, u.is_active, u.created_at,
@@ -27,6 +35,7 @@ export async function GET(request: Request) {
       GROUP BY u.id
       ORDER BY u.created_at DESC
     `
+    console.log('[GET /api/admin/clients] Query successful, clients count:', clients.length)
 
     return Response.json({ success: true, clients })
   } catch (error) {
