@@ -1,10 +1,10 @@
 # CoolTrack Pro - Sistema de Gestión de Servicios HVAC
 
-Plataforma profesional web para gestión integral de órdenes de servicio, cotizaciones y seguimiento en tiempo real de técnicos de aire acondicionado.
+Aplicación móvil profesional para gestión integral de órdenes de servicio, cotizaciones y seguimiento en tiempo real de técnicos de aire acondicionado.
 
-## 🎯 Características
+## Características
 
-### Cliente Portal
+### Portal Cliente
 - Dashboard con historial de órdenes
 - Crear nuevas solicitudes de servicio
 - Ver detalles de órdenes y cotizaciones
@@ -23,60 +23,85 @@ Plataforma profesional web para gestión integral de órdenes de servicio, cotiz
 - Dashboard KPIs con métricas clave
 - Mapa en tiempo real de técnicos
 - Gestión completa de órdenes
+- Administración de equipos por cliente
 - Administración de técnicos y clientes
 - Catálogo de servicios
-- Generación de reportes
+- Gestión de cotizaciones
+- Reportes detallados
 
-## 🛠 Stack Tecnológico
+## Stack Tecnológico
 
-- **Frontend**: Next.js 16 + React 19 + TypeScript
-- **Styling**: Tailwind CSS + shadcn/ui
+- **Framework**: Expo Router (React Native)
+- **UI**: React Native + NativeWind (Tailwind)
 - **Base de Datos**: Neon PostgreSQL
 - **Autenticación**: NextAuth v5
 - **API**: Neon SQL con serverless queries
+- **Navegación**: Expo Router (file-based routing)
 
-## 📋 Requisitos Previos
+## Estructura del Proyecto
 
-1. **Neon PostgreSQL** - Base de datos configurada (ya existe en el proyecto)
-2. **Google Maps API Key** - Para mapas en tiempo real
+```
+├── app/                      # Expo Router (file-based routing)
+│   ├── (admin)/              # Grupo de rutas admin
+│   │   ├── client/           # Gestión de clientes
+│   │   └── equipment/        # Gestión de equipos
+│   ├── (auth)/              # Grupo de rutas auth
+│   ├── (client)/            # Grupo de rutas cliente
+│   │   ├── quote/            # Cotizaciones
+│   │   └── service/          # Órdenes de servicio
+│   ├── (technician)/         # Grupo de rutas técnico
+│   │   └── job/              # Trabajos asignados
+│   └── api/                  # Rutas API
+├── components/               # Componentes reutilizables
+│   └── ui/                   # Componentes UI base
+├── context/                  # React Context (Auth, etc.)
+├── lib/                      # Utilidades y configuración
+│   ├── db.ts                 # Cliente Neon
+│   ├── models/               # Modelos de datos
+│   ├── repositories/         # Repositorios de datos
+│   └── services/             # Servicios de negocio
+├── constants/                # Constantes de la app
+└── assets/                   # Recursos estáticos
+```
+
+## Requisitos Previos
+
+1. **Node.js** 18+ 
+2. **Neon PostgreSQL** - Base de datos configurada
 3. **NEXTAUTH_SECRET** - Variable de entorno para NextAuth
 
-## 🚀 Instalación y Configuración
+## Instalación y Configuración
 
 ### 1. Instalar Dependencias
 ```bash
 npm install
-# o
-pnpm install
 ```
 
 ### 2. Variables de Entorno
 
-Crea un archivo `.env.local` con las siguientes variables:
+Crea un archivo `.env` con las siguientes variables:
 
 ```env
-# Base de Datos (ya configurada)
-DATABASE_URL=postgresql://user:password@neon.postgres.vercel-storage.com/dbname
+# Base de Datos
+DATABASE_URL=postgresql://user:password@neon.postgres.verket-storage.com/dbname
 
 # NextAuth
 NEXTAUTH_SECRET=tu-secreto-aleatorio-aqui
 NEXTAUTH_URL=http://localhost:3000
 
-# Google Maps (opcional para desarrollo)
+# Google Maps
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=tu-api-key-aqui
 ```
 
 ### 3. Ejecutar Desarrollo
 
 ```bash
-npm run dev
-# o
-pnpm dev
+npx expo start
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+Usa `npx expo start --web` para desarrollo web, o un emulador para desarrollo móvil.
 
-## 👤 Cuentas de Demostración
+## Cuentas de Demostración
 
 La base de datos incluye tres cuentas de prueba:
 
@@ -95,65 +120,35 @@ La base de datos incluye tres cuentas de prueba:
 - **Contraseña**: `password`
 - **Acceso**: Portal de cliente para crear órdenes
 
-## 📁 Estructura del Proyecto
+## API Endpoints
 
-```
-├── app/
-│   ├── api/                  # Rutas API (NextAuth, órdenes, ubicación, etc)
-│   ├── auth/                 # Páginas de autenticación
-│   ├── admin/                # Panel administrativo
-│   ├── technician/           # Aplicación técnico
-│   ├── client/               # Portal cliente
-│   ├── layout.tsx            # Layout raíz
-│   ├── page.tsx              # Página raíz (redirect)
-│   └── globals.css           # Estilos globales
-├── components/
-│   ├── header.tsx            # Header con navegación
-│   ├── status-badge.tsx      # Badge de estado
-│   ├── priority-badge.tsx    # Badge de prioridad
-│   ├── timeline.tsx          # Línea de tiempo
-│   ├── photo-gallery.tsx     # Galería de fotos
-│   ├── notification-badge.tsx # Notificaciones
-│   ├── map-view.tsx          # Vista de mapa
-│   └── ui/                   # Componentes shadcn/ui
-├── lib/
-│   ├── db.ts                 # Cliente Neon
-│   ├── types.ts              # Tipos TypeScript
-│   ├── auth-config.ts        # Configuración NextAuth
-│   └── auth.ts               # Exporta NextAuth
-├── middleware.ts             # Middleware de autenticación
-└── tailwind.config.ts        # Configuración Tailwind
-```
+### Admin
+- `GET /api/admin/clients` - Listar clientes
+- `GET/POST/PUT/DELETE /api/admin/equipment` - CRUD equipos
+- `GET /api/admin/dashboard` - Métricas del dashboard
+- `GET /api/admin/stats` - Estadísticas
 
-## 🔐 Seguridad
+### Órdenes
+- `GET /api/orders` - Listar órdenes
+- `POST /api/orders` - Crear orden
+- `GET/PUT /api/orders/[id]` - Ver/Actualizar orden
+
+### Equipos
+- `GET /api/equipment` - Listar equipos
+- `POST /api/equipment` - Crear equipo
+
+### Técnicos
+- `POST /api/technicians/locations` - Actualizar ubicación
+- `GET /api/technicians/locations` - Ver ubicaciones
+
+## Seguridad
 
 - Autenticación con NextAuth + Credentials Provider
 - Middleware de protección de rutas basado en roles
 - Contraseñas hasheadas con bcryptjs
-- Session management seguro
 - CSRF protection incluido
 
-## 📱 Responsive Design
-
-La aplicación está optimizada para:
-- ✅ Desktop (1920px+)
-- ✅ Tablet (768px - 1024px)
-- ✅ Mobile (320px - 480px) - Especialmente para técnicos en campo
-
-## 🗺️ Mapas y GPS
-
-### Google Maps
-Implementado para:
-- Mapa de ubicación de técnicos en tiempo real (Admin)
-- Mapa de dirección de orden
-- Visualización de zona de cobertura
-
-### Geolocalización
-- Tracking automático de ubicación del técnico
-- Precisión hasta ±10m
-- Actualizaciones cada 10 segundos
-
-## 📊 Base de Datos
+## Base de Datos
 
 ### Tablas Principales
 - **users** - Clientes, técnicos, administradores
@@ -164,68 +159,12 @@ Implementado para:
 - **technician_locations** - Ubicación en tiempo real
 - **order_photos** - Fotos de órdenes
 - **notifications** - Sistema de notificaciones
+- **maintenance_logs** - Historial de mantenimiento
 
-## 🚀 Roadmap - React Native
-
-Este proyecto está diseñado para ser fácilmente migrable a React Native:
-
-### Arquitectura Preparada
-- ✅ Hooks separados para lógica de negocio
-- ✅ Componentes atómicos y reutilizables
-- ✅ Design tokens centralizados
-- ✅ APIs desacopladas de UI
-
-### Próximos Pasos para React Native
-1. Crear versión React Native con `expo`
-2. Compartir `lib/` (types, db, auth)
-3. Reemplazar componentes UI con React Native equivalentes
-4. Usar `react-native-maps` en lugar de Google Maps Web
-5. Usar `expo-location` para GPS
-
-## 📝 Ejemplo de Extensión
-
-### Agregar Nueva Funcionalidad
-
-**1. Crear tabla en base de datos** (si es necesario)
-```sql
-CREATE TABLE nueva_tabla (
-  id UUID PRIMARY KEY,
-  -- campos...
-);
-```
-
-**2. Crear tipo TypeScript**
-```typescript
-// lib/types.ts
-export interface NuevoTipo {
-  id: string;
-  // propiedades...
-}
-```
-
-**3. Crear API route**
-```typescript
-// app/api/nueva-endpoint/route.ts
-export async function GET(request: NextRequest) {
-  // Lógica...
-}
-```
-
-**4. Crear componente UI**
-```typescript
-// components/nuevo-componente.tsx
-export function NuevoComponente() {
-  // JSX...
-}
-```
-
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Base de datos no conecta
-```bash
-# Verifica DATABASE_URL en .env.local
-echo $DATABASE_URL
-```
+Verifica DATABASE_URL en .env
 
 ### NextAuth error
 ```bash
@@ -238,16 +177,12 @@ openssl rand -base64 32
 - Verifica NEXTAUTH_URL
 - Comprueba que session callbacks estén correctos
 
-## 📞 Soporte
-
-Para reportar problemas o sugerir mejoras, usa los canales habituales de soporte.
-
-## 📄 Licencia
+## Licencia
 
 Proyecto CoolTrack Pro - Todos los derechos reservados.
 
 ---
 
-**Versión**: 1.0.0  
-**Última actualización**: Marzo 2026  
-**Estado**: En desarrollo - Preparado para React Native
+**Versión**: 2.0.0
+**Última actualización**: Marzo 2026
+**Framework**: Expo Router + React Native
