@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { ORDER_STATUS, ORDER_STATUS_LABEL, OrderStatus } from '../../lib/order-status';
-import { MapPinIcon, UserIcon, ClipboardIcon, XIcon, UsersIcon } from '../../components/ui/Icons';
+import { MapPinIcon, UserIcon, ClipboardIcon, XIcon, UsersIcon, FileTextIcon, CheckCircleIcon } from '../../components/ui/Icons';
+import { apiCall } from '../../lib/api';
 
 const ALL_FILTERS: Array<'ALL' | OrderStatus> = [
   'ALL',
@@ -18,6 +20,7 @@ const ALL_FILTERS: Array<'ALL' | OrderStatus> = [
 ];
 
 export default function AdminOrders() {
+  const router = useRouter();
   const { user } = useAuth();
   const [filter, setFilter] = useState<'ALL' | OrderStatus>('ALL');
   const [orders, setOrders] = useState<any[]>([]);
@@ -43,8 +46,27 @@ export default function AdminOrders() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const checkQuoteApproved = async (orderId: string): Promise<boolean> => {
+    try {
+      const { success, data } = await apiCall<{ data: any[] }>(`/api/quotes?user_id=${user?.id}&role=admin`);
+      if (success && data?.data) {
+        const approvedQuote = data.data.find((q: any) => q.order_id === orderId && q.status === 'approved');
+        return !!approvedQuote;
+      }
+    } catch (e) { console.error(e); }
+    return false;
+  };
+
   const handleAssign = async (techId: string) => {
     if (!assigningId) return;
+    
+    const hasApprovedQuote = await checkQuoteApproved(assigningId);
+    if (!hasApprovedQuote) {
+      Alert.alert('Cotización requerida', 'Primero debes crear una cotización y esperar que el cliente la apruebe antes de asignar un técnico.');
+      setShowModal(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/assign-order', {
         method: 'POST',
@@ -129,7 +151,15 @@ export default function AdminOrders() {
                   </Text>
                 </View>
                 {item.status === ORDER_STATUS.PENDING && (
-                  <Button title="Asignar" size="sm" onPress={() => { setAssigningId(item.id); setShowModal(true); }} />
+                  <View className="flex-row gap-2">
+                    <Button 
+                      title="Cotizar" 
+                      size="sm" 
+                      variant="secondary"
+                      icon={<FileTextIcon size={14} color="#0F4C75" />}
+                      onPress={() => router.push({ pathname: '/(admin)/quote/new', params: { order_id: item.id } } as any)} 
+                    />
+                  </View>
                 )}
               </View>
             </View>

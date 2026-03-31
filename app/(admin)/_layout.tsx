@@ -84,10 +84,10 @@ export default function AdminLayout() {
       />
       <Tabs.Screen
         name="create-technician"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
+      <Tabs.Screen name="client" options={{ href: null }} />
+      <Tabs.Screen name="quote" options={{ href: null }} />
     </Tabs>
   );
 }
