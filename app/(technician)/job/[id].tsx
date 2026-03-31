@@ -281,27 +281,20 @@ export default function JobDetail() {
                 )}
 
                 {/* Quote button */}
-                {(currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_TRANSIT) && (
+                {quoteStatus === 'approved' && quoteId && (
                   <TouchableOpacity
                     className="flex-row items-center justify-between px-4 py-3.5 rounded-xl border border-surface-border bg-surface"
                     onPress={() => {
-                      if (quoteStatus && quoteId) {
-                        router.push({
-                          pathname: '/(technician)/job/quote-detail',
-                          params: { quote_id: quoteId },
-                        });
-                      } else {
-                        router.push({
-                          pathname: '/(technician)/create-quote',
-                          params: { order_id: id, client_id: order.client_id, order_number: order.order_number },
-                        });
-                      }
+                      router.push({
+                        pathname: '/(technician)/job/quote-detail',
+                        params: { quote_id: quoteId },
+                      });
                     }}
                   >
                     <View className="flex-row items-center gap-2">
                       <FileTextIcon size={16} color="#0F4C75" />
                       <Text style={{ color: '#0F4C75', fontWeight: '700', fontSize: 14 }}>
-                        {quoteStatus ? 'Ver cotización' : 'Generar cotización'}
+                        Ver cotización aprobada
                       </Text>
                     </View>
                     <ChevronRightIcon size={16} color="#0F4C75" />

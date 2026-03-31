@@ -74,6 +74,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="create-technician" options={{ href: null }} />
       <Tabs.Screen name="client/new" options={{ href: null }} />
       <Tabs.Screen name="client/[id]" options={{ href: null }} />
+
     </Tabs>
   );
 }

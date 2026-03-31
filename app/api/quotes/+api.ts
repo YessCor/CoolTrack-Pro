@@ -38,23 +38,29 @@ export async function POST(request: Request) {
     const user_id = url.searchParams.get('user_id');
     const role = url.searchParams.get('role')?.toLowerCase();
     
-    if (!user_id || role !== 'technician') {
-      return createErrorResponse('Solo los técnicos pueden generar cotizaciones', 401);
+    if (!user_id) {
+      return createErrorResponse('user_id es requerido', 401);
+    }
+
+    if (role !== 'admin' && role !== 'technician') {
+      return createErrorResponse('Solo admins o técnicos pueden generar cotizaciones', 401);
     }
 
     const body = await request.json();
     
-    const { order_id, client_id, items, notes, valid_until } = body;
+    const { order_id, client_id, technician_id, items, notes, valid_until, status } = body;
 
     if (!client_id || !items || !Array.isArray(items) || items.length === 0) {
       return createErrorResponse('Faltan campos obligatorios o la lista de ítems está vacía', 400);
     }
 
     const cleanOrderId = (order_id && order_id.trim() !== '') ? order_id : null;
+    const cleanTechId = (technician_id && technician_id.trim() !== '') ? technician_id : null;
     const subtotal = Number(items.reduce((sum: number, item: any) => sum + (Number(item.total) || 0), 0));
     const tax_rate = 0.16; 
     const taxAmount = Number((subtotal * tax_rate).toFixed(2));
     const total = Number((subtotal + taxAmount).toFixed(2));
+    const initialStatus = status || 'sent';
 
     const result = await sql`
       INSERT INTO quotes (
@@ -64,8 +70,8 @@ export async function POST(request: Request) {
       ) VALUES (
         ${cleanOrderId}::uuid, 
         ${client_id}::uuid, 
-        ${user_id}::uuid, 
-        'sent', 
+        ${cleanTechId}::uuid, 
+        ${initialStatus}, 
         ${subtotal}, 
         ${tax_rate}, 
         ${taxAmount}, 
