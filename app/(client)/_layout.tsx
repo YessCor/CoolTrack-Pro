@@ -14,7 +14,7 @@ export default function ClientLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: BG_DARK, height: 80 },
+        headerStyle: { backgroundColor: BG_DARK, height: 90 },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: '600' as const, fontSize: 17 },
         headerShadowVisible: false,
