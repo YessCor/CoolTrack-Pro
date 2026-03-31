@@ -6,6 +6,7 @@ import { apiCall } from '../../lib/api';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { FileTextIcon, PlusIcon, XIcon, ClipboardIcon } from '../../components/ui/Icons';
+import { Toast } from '../../components/ui/Toast';
 
 interface Item {
   id: string;
@@ -23,6 +24,7 @@ export default function CreateQuote() {
   }>();
 
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [items, setItems] = useState<Item[]>([]);
   const [newItem, setNewItem] = useState({ description: '', unit_price: '' });
 
@@ -62,18 +64,32 @@ export default function CreateQuote() {
         }),
       });
       if (success) {
-        Alert.alert('Cotización enviada', 'El cliente recibirá la propuesta para su aprobación.', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
+        setToast({
+          visible: true,
+          message: 'Cotización enviada exitosamente. El cliente la recibirá para su aprobación.',
+          type: 'success',
+        });
+        setTimeout(() => router.back(), 1500);
       } else {
-        Alert.alert('Error', error || 'No se pudo crear la cotización.');
+        setToast({
+          visible: true,
+          message: error || 'No se pudo crear la cotización.',
+          type: 'error',
+        });
       }
     } catch { Alert.alert('Error de conexión', 'No se pudo contactar con el servidor.'); }
     finally { setLoading(false); }
   };
 
   return (
-    <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+    <>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
+      <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
       {/* Dark header */}
       <View className="bg-ink px-5 pt-5 pb-10">
         <View className="flex-row items-center gap-2 mb-1">
@@ -196,5 +212,6 @@ export default function CreateQuote() {
         )}
       </View>
     </ScrollView>
+    </>
   );
 }

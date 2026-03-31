@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { AirVentIcon, MailIcon, GoogleIcon } from '../../components/ui/Icons';
+import { AirVentIcon, MailIcon } from '../../components/ui/Icons';
 
 export default function Login() {
   const { login, loading } = useAuth();
@@ -73,29 +73,6 @@ export default function Login() {
           size="lg"
           className="mb-4 w-full"
         />
-
-        <View className="flex-row items-center my-5">
-          <View className="flex-1 h-px bg-surface-border" />
-          <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '600', marginHorizontal: 12 }}>O</Text>
-          <View className="flex-1 h-px bg-surface-border" />
-        </View>
-
-        <TouchableOpacity
-          className="flex-row items-center justify-center bg-surface-card border border-surface-border py-3.5 rounded-xl"
-          style={{ gap: 10 }}
-        >
-          <GoogleIcon size={20} />
-          <Text style={{ color: '#0D1B2A', fontWeight: '600', fontSize: 15 }}>
-            Continuar con Google
-          </Text>
-        </TouchableOpacity>
-
-        <View className="flex-row justify-center mt-8">
-          <Text style={{ color: '#64748b', fontSize: 14 }}>¿No tienes cuenta? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-            <Text style={{ color: '#0F4C75', fontWeight: '700', fontSize: 14 }}>Regístrate</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </ScrollView>
   );

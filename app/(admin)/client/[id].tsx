@@ -14,13 +14,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeftIcon, SaveIcon } from '../../../components/ui/Icons';
 import { getClient, createClientRepository, updateClientRepository } from '../../../lib/repositories/client-repository';
 import { Client } from '../../../lib/models/client';
+import { useAuth } from '../../../context/AuthContext';
+import { Toast } from '../../../components/ui/Toast';
+import { apiCall } from '../../../lib/api';
 
 export default function ClientForm() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const isEditing = !!id && id !== 'new';
 
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [form, setForm] = useState({
     name: '',
     contact_name: '',
@@ -38,17 +43,18 @@ export default function ClientForm() {
   }, [id]);
 
   const loadClient = async () => {
+    if (!user?.id) return;
     try {
-      const client = await getClient(id!);
+      const client = await getClient(id!, user.id, user.role || 'admin');
       if (client) {
         setForm({
           name: client.name || '',
-          contact_name: client.contact_name || '',
+          contact_name: (client as any).contact_name || '',
           email: client.email || '',
           phone: client.phone || '',
-          alternate_phone: client.alternate_phone || '',
+          alternate_phone: (client as any).alternate_phone || '',
           address: client.address || '',
-          notes: client.notes || '',
+          notes: (client as any).notes || '',
         });
       }
     } catch (error) {
@@ -59,23 +65,31 @@ export default function ClientForm() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      Alert.alert('Error', 'El nombre es requerido');
+      setToast({ visible: true, message: 'El nombre es requerido', type: 'error' });
       return;
     }
 
     setLoading(true);
     try {
       if (isEditing && id) {
-        await updateClientRepository(id, form);
-        Alert.alert('Éxito', 'Cliente actualizado correctamente');
+        const { success, error } = await apiCall(`/api/admin/clients/${id}?user_id=${user?.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(form),
+        });
+        if (success) {
+          setToast({ visible: true, message: 'Cliente actualizado correctamente', type: 'success' });
+          setTimeout(() => router.back(), 1500);
+        } else {
+          setToast({ visible: true, message: error || 'No se pudo actualizar', type: 'error' });
+        }
       } else {
-        await createClientRepository(form);
-        Alert.alert('Éxito', 'Cliente creado correctamente');
+        await createClientRepository(form, user?.id || '');
+        setToast({ visible: true, message: 'Cliente creado correctamente', type: 'success' });
+        setTimeout(() => router.back(), 1500);
       }
-      router.back();
     } catch (error) {
       console.error('Error saving client:', error);
-      Alert.alert('Error', 'No se pudo guardar el cliente');
+      setToast({ visible: true, message: 'No se pudo guardar el cliente', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -86,10 +100,17 @@ export default function ClientForm() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeftIcon size={24} color="#0F4C75" />
@@ -210,6 +231,7 @@ export default function ClientForm() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </>
   );
 }
 

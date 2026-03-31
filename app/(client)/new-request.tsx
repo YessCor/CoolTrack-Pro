@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { uploadToCloudinary } from '../../services/cloudinary.service';
 import { CameraIcon, MapPinIcon, AirVentIcon, CheckCircleIcon, ChevronDownIcon, XIcon } from '../../components/ui/Icons';
+import { Toast } from '../../components/ui/Toast';
 
 const SERVICE_TYPES = [
   'Mantenimiento Correctivo',
@@ -35,6 +36,7 @@ export default function NewRequestScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [equipments, setEquipments] = useState<any[]>([]);
@@ -91,11 +93,18 @@ export default function NewRequestScreen() {
       });
       const data = await res.json();
       if (data.success) {
-        Alert.alert('Solicitud enviada', 'Un técnico será asignado pronto.', [
-          { text: 'OK', onPress: () => router.replace('/(client)') },
-        ]);
+        setToast({
+          visible: true,
+          message: 'Solicitud enviada exitosamente. Un técnico será asignado pronto.',
+          type: 'success',
+        });
+        setTimeout(() => router.replace('/(client)'), 1500);
       } else {
-        Alert.alert('Error', data.error || 'No se pudo crear la solicitud.');
+        setToast({
+          visible: true,
+          message: data.error || 'No se pudo crear la solicitud.',
+          type: 'error',
+        });
       }
     } catch {
       Alert.alert('Error de red', 'Verifica tu conexión e intenta de nuevo.');
@@ -106,6 +115,12 @@ export default function NewRequestScreen() {
 
   return (
     <>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
       <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <StatusBar barStyle="light-content" backgroundColor="#0D1B2A" />
 

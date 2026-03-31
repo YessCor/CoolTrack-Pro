@@ -12,9 +12,11 @@ import { useRouter } from 'expo-router';
 import { UserIcon, PlusIcon, ChevronRightIcon, PhoneIcon, MailIcon } from '../../components/ui/Icons';
 import { getClientsWithStats, deleteClient } from '../../lib/repositories/client-repository';
 import { ClientWithStats } from '../../lib/models/client';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminClients() {
   const router = useRouter();
+  const { user } = useAuth();
 
   const navigateToClient = (id: string) => {
     router.push({ pathname: '/(admin)/client/[id]', params: { id } } as any);
@@ -29,8 +31,9 @@ export default function AdminClients() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadClients = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      const data = await getClientsWithStats();
+      const data = await getClientsWithStats(user.id, user.role || 'admin');
       setClients(data);
     } catch (error) {
       console.error('Error loading clients:', error);
@@ -38,7 +41,7 @@ export default function AdminClients() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     loadClients();
@@ -61,7 +64,7 @@ export default function AdminClients() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteClient(client.id);
+              await deleteClient(client.id, user?.id || '');
               await loadClients();
             } catch (error) {
               console.error('Error deleting client:', error);

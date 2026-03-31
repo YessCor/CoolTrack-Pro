@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { ArrowLeftIcon, AirVentIcon } from '../../components/ui/Icons';
+import { Toast } from '../../components/ui/Toast';
 
 const EQUIPMENT_TYPES = [
   { key: 'split', label: 'Aire de ventana' },
@@ -24,6 +25,7 @@ export default function NewEquipment() {
   const equipmentId = params.id as string;
   
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [form, setForm] = useState({
     name: (params.name as string) || '',
     type: (params.type as string) || 'mini_split',
@@ -61,13 +63,18 @@ export default function NewEquipment() {
       const data = await res.json();
       
       if (data.success) {
-        Alert.alert(
-          isEdit ? 'Actualizado' : 'Registrado',
-          `Equipo ${isEdit ? 'actualizado' : 'registrado'} exitosamente.`,
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
+        setToast({
+          visible: true,
+          message: `Equipo ${isEdit ? 'actualizado' : 'registrado'} exitosamente`,
+          type: 'success',
+        });
+        setTimeout(() => router.back(), 1500);
       } else {
-        Alert.alert('Error', data.error || `No se pudo ${isEdit ? 'actualizar' : 'registrar'} el equipo.`);
+        setToast({
+          visible: true,
+          message: data.error || `No se pudo ${isEdit ? 'actualizar' : 'registrar'} el equipo.`,
+          type: 'error',
+        });
       }
     } catch {
       Alert.alert('Error de red', 'Verifica tu conexión e intenta de nuevo.');
@@ -81,6 +88,12 @@ export default function NewEquipment() {
       className="flex-1 bg-surface" 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View className="flex-row items-center gap-3 mb-6">
           <TouchableOpacity onPress={() => router.back()} className="p-2 rounded-xl" style={{ backgroundColor: '#F1F5F9' }}>

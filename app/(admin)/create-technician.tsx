@@ -5,11 +5,13 @@ import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { UserIcon, MailIcon, PhoneIcon, ShieldIcon } from '../../components/ui/Icons';
+import { Toast } from '../../components/ui/Toast';
 
 export default function CreateTechnician() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
 
   const handleCreate = async () => {
@@ -26,11 +28,18 @@ export default function CreateTechnician() {
       });
       const data = await res.json();
       if (data.success) {
-        Alert.alert('Técnico creado', `${data.technician.name} fue registrado correctamente.`, [
-          { text: 'Volver', onPress: () => router.back() },
-        ]);
+        setToast({
+          visible: true,
+          message: `Técnico ${data.technician.name} registrado correctamente.`,
+          type: 'success',
+        });
+        setTimeout(() => router.back(), 1500);
       } else {
-        Alert.alert('Error', data.error || 'No se pudo crear el técnico.');
+        setToast({
+          visible: true,
+          message: data.error || 'No se pudo crear el técnico.',
+          type: 'error',
+        });
       }
     } catch {
       Alert.alert('Error de red', 'Verifica tu conexión.');
@@ -40,7 +49,14 @@ export default function CreateTechnician() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
+      <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <StatusBar barStyle="light-content" backgroundColor="#0D1B2A" />
 
       {/* Info banner */}
@@ -95,5 +111,6 @@ export default function CreateTechnician() {
         <Button title="Cancelar" variant="outline" onPress={() => router.back()} className="w-full" />
       </View>
     </ScrollView>
+    </>
   );
 }
