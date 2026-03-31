@@ -1,86 +1,348 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
-import { apiCall } from '../../lib/api';
-import { BarChartIcon, ClipboardIcon, AlertTriangleIcon, CheckCircleIcon, MapPinIcon } from '../../components/ui/Icons';
+import { BarChartIcon, ClipboardIcon, AlertTriangleIcon, CheckCircleIcon, MapPinIcon, UsersIcon, WrenchIcon, FileTextIcon } from '../../components/ui/Icons';
+import { calculateKPIs, KPIData, TimeRange, formatCurrency } from '../../lib/services/kpi-service';
+import { SyncStatus } from '../../components/SyncStatus';
 
 function StatCard({ label, value, icon, accent, sub }: { label: string; value: number | string; icon: React.ReactNode; accent: string; sub?: string }) {
   return (
-    <View className="flex-1 bg-surface-card rounded-2xl p-4 border border-surface-border" style={{ minWidth: 0 }}>
-      <View className="w-10 h-10 rounded-xl items-center justify-center mb-3" style={{ backgroundColor: accent + '18' }}>
+    <View style={styles.statCard}>
+      <View style={[styles.statIcon, { backgroundColor: accent + '18' }]}>
         {icon}
       </View>
-      <Text style={{ fontSize: 28, fontWeight: '800', color: '#0D1B2A', lineHeight: 32 }}>{value}</Text>
-      <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748b', marginTop: 2 }}>{label}</Text>
-      {sub && <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{sub}</Text>}
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      {sub && <Text style={styles.statSub}>{sub}</Text>}
+    </View>
+  );
+}
+
+function TimeRangeSelector({ selected, onSelect }: { selected: TimeRange; onSelect: (range: TimeRange) => void }) {
+  const ranges: TimeRange[] = ['today', 'week', 'month', 'year'];
+  const labels = { today: 'Hoy', week: 'Semana', month: 'Mes', year: 'Año' };
+  const colors = { today: '#0F4C75', week: '#1B6CA8', month: '#2E86AB', year: '#00B4D8' };
+
+  return (
+    <View style={styles.rangeSelector}>
+      {ranges.map(range => (
+        <TouchableOpacity
+          key={range}
+          style={[
+            styles.rangeButton,
+            selected === range && { backgroundColor: colors[range] }
+          ]}
+          onPress={() => onSelect(range)}
+        >
+          <Text style={[
+            styles.rangeButtonText,
+            selected === range && { color: '#fff' }
+          ]}>
+            {labels[range]}
+          </Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const { user } = useAuth();
-  const [stats, setStats] = useState({ assigned: 0, completed: 0, alerts: 0 });
+  const [stats, setStats] = useState<KPIData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
 
-  const fetchStats = async () => {
-    if (!user) return;
-    setLoading(true);
+  const fetchStats = useCallback(async () => {
     try {
-      const { success, data, error } = await apiCall<{ stats: any }>(`/api/admin/stats?user_id=${user.id}&role=${user.role}`);
-      if (success && data) setStats(data.stats);
-      else console.error('[ADMIN-DASH] error:', error);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+      const data = await calculateKPIs(timeRange);
+      setStats(data);
+    } catch (error) {
+      console.error('Error fetching KPIs:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [timeRange]);
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   return (
     <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchStats} colors={['#0F4C75']} tintColor="#0F4C75" />}
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={fetchStats}
+          colors={['#0F4C75']}
+          tintColor="#0F4C75"
+        />
+      }
     >
-      {/* Welcome strip */}
-      <View className="bg-ink rounded-2xl px-5 py-4 mb-5 flex-row items-center justify-between">
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.welcomeLabel}>PANEL ADMINISTRATIVO</Text>
+          <Text style={styles.welcomeTitle}>Bienvenido{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</Text>
+        </View>
+        <SyncStatus />
+      </View>
+
+      <TimeRangeSelector selected={timeRange} onSelect={setTimeRange} />
+
+      <View style={styles.welcomeStrip}>
         <View>
-          <Text style={{ color: '#4A6785', fontSize: 11, fontWeight: '700', letterSpacing: 1.2 }}>PANEL ADMINISTRATIVO</Text>
-          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginTop: 2 }}>Métricas del día</Text>
+          <Text style={styles.welcomeSubLabel}>MÉTRICAS</Text>
+          <Text style={styles.welcomeSubTitle}>Resumen de rendimiento</Text>
         </View>
-        <View className="w-10 h-10 rounded-xl bg-brand items-center justify-center">
-          <BarChartIcon size={20} color="#fff" />
-        </View>
-      </View>
-
-      {/* KPI row */}
-      <View className="flex-row gap-3 mb-3">
-        <StatCard label="Asignadas" value={stats.assigned} icon={<ClipboardIcon size={20} color="#1B6CA8" />} accent="#1B6CA8" sub="Órdenes activas" />
-        <StatCard label="Completadas" value={stats.completed} icon={<CheckCircleIcon size={20} color="#10B981" />} accent="#10B981" sub="Hoy" />
-      </View>
-
-      {/* Alerts */}
-      <View className="bg-surface-card rounded-2xl p-4 border mb-5 flex-row items-center gap-4" style={{ borderColor: stats.alerts > 0 ? '#F59E0B40' : '#E2E8F0' }}>
-        <View className="w-12 h-12 rounded-xl bg-amber-50 items-center justify-center">
-          <AlertTriangleIcon size={22} color="#F59E0B" />
-        </View>
-        <View className="flex-1">
-          <Text style={{ color: '#0D1B2A', fontSize: 22, fontWeight: '800' }}>{stats.alerts}</Text>
-          <Text style={{ color: '#64748b', fontSize: 13, fontWeight: '600' }}>Alertas críticas</Text>
-          <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 1 }}>Órdenes sin atención detectadas</Text>
+        <View style={styles.welcomeIcon}>
+          <BarChartIcon size={24} color="#fff" />
         </View>
       </View>
 
-      {/* Map */}
-      <Text style={{ color: '#0D1B2A', fontSize: 16, fontWeight: '700', marginBottom: 12 }}>Ubicación en tiempo real</Text>
-      <View className="rounded-2xl overflow-hidden border border-surface-border" style={{ height: 200, backgroundColor: '#EEF2F7' }}>
-        <View className="flex-1 items-center justify-center gap-3">
-          <View className="w-14 h-14 rounded-2xl items-center justify-center" style={{ backgroundColor: '#E8F4FD' }}>
-            <MapPinIcon size={26} color="#0F4C75" />
+      {stats ? (
+        <>
+          <View style={styles.statsGrid}>
+            <StatCard
+              label="Completados"
+              value={stats.servicesCompleted}
+              icon={<CheckCircleIcon size={22} color="#10B981" />}
+              accent="#10B981"
+              sub={`${stats.preventiveCount} preventivos, ${stats.correctiveCount} correctivos`}
+            />
+            <StatCard
+              label="Activos"
+              value={stats.inProgressOrders}
+              icon={<WrenchIcon size={22} color="#F59E0B" />}
+              accent="#F59E0B"
+              sub="En progreso"
+            />
           </View>
-          <Text style={{ color: '#64748b', fontWeight: '600', fontSize: 14 }}>Mapa en tiempo real</Text>
-          <Text style={{ color: '#94a3b8', fontSize: 12 }}>Requiere Google Maps API Key</Text>
+
+          <View style={styles.statsGrid}>
+            <StatCard
+              label="Pendientes"
+              value={stats.pendingOrders}
+              icon={<ClipboardIcon size={22} color="#1B6CA8" />}
+              accent="#1B6CA8"
+              sub="Sin asignar"
+            />
+            <StatCard
+              label="Técnicos activos"
+              value={stats.activeTechnicians}
+              icon={<UsersIcon size={22} color="#7C3AED" />}
+              accent="#7C3AED"
+              sub="En servicio"
+            />
+          </View>
+
+          <View style={styles.statsGrid}>
+            <StatCard
+              label="Ingresos"
+              value={formatCurrency(stats.totalRevenue)}
+              icon={<FileTextIcon size={22} color="#0F4C75" />}
+              accent="#0F4C75"
+              sub="Cotizaciones aprobadas"
+            />
+            <View style={[styles.statCard, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
+              <View style={[styles.statIcon, { backgroundColor: '#FDE68A' }]}>
+                <AlertTriangleIcon size={22} color="#F59E0B" />
+              </View>
+              <Text style={styles.statValue}>{(stats.pendingOrders + stats.inProgressOrders)}</Text>
+              <Text style={styles.statLabel}>Órdenes activas</Text>
+              <Text style={styles.statSub}>Requieren atención</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <View style={styles.loadingStats}>
+          <Text style={styles.loadingText}>Cargando métricas...</Text>
+        </View>
+      )}
+
+      <View style={styles.mapSection}>
+        <Text style={styles.sectionTitle}>Ubicación en tiempo real</Text>
+        <View style={styles.mapPlaceholder}>
+          <View style={styles.mapContent}>
+            <View style={styles.mapIcon}>
+              <MapPinIcon size={32} color="#0F4C75" />
+            </View>
+            <Text style={styles.mapTitle}>Mapa de técnicos</Text>
+            <Text style={styles.mapSubtitle}>Seguimiento GPS en tiempo real</Text>
+          </View>
         </View>
       </View>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  welcomeLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 1.2,
+  },
+  welcomeTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0D1B2A',
+    marginTop: 2,
+  },
+  welcomeStrip: {
+    backgroundColor: '#0D1B2A',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  welcomeSubLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4A6785',
+    letterSpacing: 1.2,
+  },
+  welcomeSubTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
+  welcomeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#1B6CA8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rangeSelector: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  rangeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  rangeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  statValue: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0D1B2A',
+    lineHeight: 30,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  statSub: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  loadingStats: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#94a3b8',
+  },
+  mapSection: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0D1B2A',
+    marginBottom: 12,
+  },
+  mapPlaceholder: {
+    backgroundColor: '#EEF2F7',
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  mapContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    gap: 12,
+  },
+  mapIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#E8F4FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0D1B2A',
+  },
+  mapSubtitle: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+});

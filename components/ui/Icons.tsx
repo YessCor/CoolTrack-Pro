@@ -253,4 +253,37 @@ export const TagIcon = ({ size = 24, color = '#0F4C75', strokeWidth = 1.8 }: Ico
   </Svg>
 );
 
+export const CheckIcon = ({ size = 24, color = '#10B981', strokeWidth = 2 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Polyline points="20 6 9 17 4 12" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
 
+export const CloudOffIcon = ({ size = 24, color = '#64748B', strokeWidth = 1.8 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Line x1="1" y1="1" x2="23" y2="23" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"/>
+    <Path d="M22.61 16.95A5 5 0 0018 10h-1.26a8 8 0 00-7.05-6M5 5a8 8 0 004 15h1.26a8 8 0 007.05-4.95" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+export const CloudIcon = ({ size = 24, color = '#10B981', strokeWidth = 1.8 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round"/>
+  </Svg>
+);
+
+export const RefreshIcon = ({ size = 24, color = '#64748B', strokeWidth = 1.8 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Polyline points="23 4 23 10 17 10" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+    <Polyline points="1 20 1 14 7 14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+export const SaveIcon = ({ size = 24, color = '#0F4C75', strokeWidth = 1.8 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round"/>
+    <Polyline points="17 21 17 13 7 13 7 21" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+    <Polyline points="7 3 7 8 15 8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
