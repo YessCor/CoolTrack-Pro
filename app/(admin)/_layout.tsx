@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+﻿import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { TouchableOpacity, View, Text, Platform } from 'react-native';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabIcon';
@@ -27,7 +27,7 @@ export default function AdminLayout() {
       paddingBottom: Platform.OS === 'ios' ? 24 : 10,
       paddingTop: 8,
       elevation: 0,
-      shadowOpacity: 0,
+      
     },
     tabBarActiveTintColor: ICON_ACTIVE,
     tabBarInactiveTintColor: ICON_INACTIVE,
@@ -57,21 +57,21 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="orders"
         options={{
-          title: 'Órdenes', headerTitle: 'Monitor de Operaciones',
+          title: 'Ã“rdenes', headerTitle: 'Monitor de Operaciones',
           tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<ClipboardIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen
         name="quotes"
         options={{
-          title: 'Cotizaciones', headerTitle: 'Gestión Comercial',
+          title: 'Cotizaciones', headerTitle: 'GestiÃ³n Comercial',
           tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<FileTextIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen
         name="technicians"
         options={{
-          title: 'Staff', headerTitle: 'Directorio de Técnicos',
+          title: 'Staff', headerTitle: 'Directorio de TÃ©cnicos',
           tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<WrenchIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
@@ -80,6 +80,13 @@ export default function AdminLayout() {
         options={{
           title: 'Clientes', headerTitle: 'Base de Clientes',
           tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<UsersIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
+        }}
+      />
+      <Tabs.Screen
+        name="equipment"
+        options={{
+          title: 'Equipos', headerTitle: 'GestiÃ³n de Equipos',
+          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<AirVentIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
         }}
       />
       <Tabs.Screen

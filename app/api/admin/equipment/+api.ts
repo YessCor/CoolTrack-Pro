@@ -74,3 +74,194 @@ export async function GET(request: Request) {
     return createErrorResponse('Error al obtener equipos', 500);
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const role = url.searchParams.get('role');
+
+    if (role !== 'admin') {
+      return createErrorResponse('Solo admins pueden crear equipos', 403);
+    }
+
+    const {
+      client_id,
+      name,
+      type,
+      brand,
+      model,
+      serial_number,
+      capacity_tons,
+      installation_date,
+      location_description,
+      notes,
+    } = await request.json();
+
+    if (!client_id || !type || !location_description) {
+      return createErrorResponse('client_id, tipo y ubicación son requeridos', 400);
+    }
+
+    const sanitizedClientId = String(client_id).replace(/::uuid$/, '');
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(sanitizedClientId)) {
+      return createErrorResponse('client_id debe ser un UUID válido', 400);
+    }
+
+    const clientExists = await sql`SELECT id FROM users WHERE id = ${sanitizedClientId}::uuid AND role = 'client'`;
+    if (clientExists.length === 0) {
+      return createErrorResponse('Cliente no encontrado', 404);
+    }
+
+    const newEquipment = await sql`
+      INSERT INTO equipment (
+        client_id, name, type, brand, model, serial_number, 
+        capacity_tons, installation_date, location_description, notes
+      )
+      VALUES (
+        ${sanitizedClientId}::uuid, 
+        ${name || null}, 
+        ${type}, 
+        ${brand || null}, 
+        ${model || null}, 
+        ${serial_number || null},
+        ${capacity_tons || null},
+        ${installation_date || null},
+        ${location_description}, 
+        ${notes || null}
+      )
+      RETURNING *
+    `;
+
+    const equipmentWithClient = await sql`
+      SELECT e.*, u.name as client_name, u.email as client_email
+      FROM equipment e
+      JOIN users u ON e.client_id = u.id
+      WHERE e.id = ${newEquipment[0].id}
+    `;
+
+    return createSuccessResponse({ equipment: equipmentWithClient[0] });
+  } catch (error: any) {
+    console.error('[POST /api/admin/equipment]', error.message);
+    return createErrorResponse('Error al crear equipo', 500);
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const role = url.searchParams.get('role');
+
+    if (role !== 'admin') {
+      return createErrorResponse('Solo admins pueden actualizar equipos', 403);
+    }
+
+    const {
+      id,
+      client_id,
+      name,
+      type,
+      brand,
+      model,
+      serial_number,
+      capacity_tons,
+      installation_date,
+      location_description,
+      notes,
+    } = await request.json();
+
+    if (!id) {
+      return createErrorResponse('ID del equipo es requerido', 400);
+    }
+
+    const sanitizedClientId = client_id ? String(client_id).replace(/::uuid$/, '') : null;
+    const sanitizedId = String(id).replace(/::uuid$/, '');
+
+    if (sanitizedClientId) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(sanitizedClientId)) {
+        return createErrorResponse('client_id debe ser un UUID válido', 400);
+      }
+    }
+
+    let query;
+    if (sanitizedClientId) {
+      query = await sql`
+        UPDATE equipment SET
+          client_id = ${sanitizedClientId}::uuid,
+          name = ${name ?? null},
+          type = ${type ?? null},
+          brand = ${brand ?? null},
+          model = ${model ?? null},
+          serial_number = ${serial_number ?? null},
+          capacity_tons = ${capacity_tons ?? null},
+          installation_date = ${installation_date ?? null},
+          location_description = ${location_description ?? null},
+          notes = ${notes ?? null},
+          updated_at = NOW()
+        WHERE id = ${sanitizedId}::uuid
+        RETURNING *
+      `;
+    } else {
+      query = await sql`
+        UPDATE equipment SET
+          name = ${name ?? null},
+          type = ${type ?? null},
+          brand = ${brand ?? null},
+          model = ${model ?? null},
+          serial_number = ${serial_number ?? null},
+          capacity_tons = ${capacity_tons ?? null},
+          installation_date = ${installation_date ?? null},
+          location_description = ${location_description ?? null},
+          notes = ${notes ?? null},
+          updated_at = NOW()
+        WHERE id = ${sanitizedId}::uuid
+        RETURNING *
+      `;
+    }
+
+    if (query.length === 0) {
+      return createErrorResponse('Equipo no encontrado', 404);
+    }
+
+    const equipmentWithClient = await sql`
+      SELECT e.*, u.name as client_name, u.email as client_email
+      FROM equipment e
+      JOIN users u ON e.client_id = u.id
+      WHERE e.id = ${sanitizedId}::uuid
+    `;
+
+    return createSuccessResponse({ equipment: equipmentWithClient[0] });
+  } catch (error: any) {
+    console.error('[PUT /api/admin/equipment]', error.message);
+    return createErrorResponse('Error al actualizar equipo', 500);
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const role = url.searchParams.get('role');
+    const id = url.searchParams.get('id');
+
+    if (role !== 'admin') {
+      return createErrorResponse('Solo admins pueden eliminar equipos', 403);
+    }
+
+    if (!id) {
+      return createErrorResponse('ID del equipo es requerido', 400);
+    }
+
+    const deleted = await sql`
+      DELETE FROM equipment WHERE id = ${id}::uuid RETURNING id
+    `;
+
+    if (deleted.length === 0) {
+      return createErrorResponse('Equipo no encontrado', 404);
+    }
+
+    return createSuccessResponse({ message: 'Equipo eliminado' });
+  } catch (error: any) {
+    console.error('[DELETE /api/admin/equipment]', error.message);
+    return createErrorResponse('Error al eliminar equipo', 500);
+  }
+}

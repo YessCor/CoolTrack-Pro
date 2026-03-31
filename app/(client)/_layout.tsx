@@ -1,7 +1,7 @@
-import { Tabs } from 'expo-router';
+﻿import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { TouchableOpacity, View, Text, Platform } from 'react-native';
-import { HomeIcon, ClipboardIcon, LayersIcon, LogOutIcon, AirVentIcon } from '../../components/ui/Icons';
+import { HomeIcon, ClipboardIcon, LogOutIcon, AirVentIcon } from '../../components/ui/Icons';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabIcon';
 
 const ICON_ACTIVE = '#00B4D8';
@@ -26,7 +26,7 @@ export default function ClientLayout() {
           paddingBottom: Platform.OS === 'ios' ? 24 : 10,
           paddingTop: 8,
           elevation: 0,
-          shadowOpacity: 0,
+          
         },
         tabBarActiveTintColor: ICON_ACTIVE,
         tabBarInactiveTintColor: ICON_INACTIVE,
@@ -57,16 +57,6 @@ export default function ClientLayout() {
           headerTitle: 'Mis Solicitudes',
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon focused={focused} icon={<HomeIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="equipment"
-        options={{
-          title: 'Equipos',
-          headerTitle: 'Mis Equipos',
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon focused={focused} icon={<LayersIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />
           ),
         }}
       />

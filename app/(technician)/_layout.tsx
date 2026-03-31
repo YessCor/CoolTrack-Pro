@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+﻿import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { TouchableOpacity, View, Text, Platform } from 'react-native';
 import { ClipboardIcon, UserIcon, LogOutIcon, AirVentIcon } from '../../components/ui/Icons';
@@ -26,7 +26,7 @@ export default function TechnicianLayout() {
           paddingBottom: Platform.OS === 'ios' ? 24 : 10,
           paddingTop: 8,
           elevation: 0,
-          shadowOpacity: 0,
+          
         },
         tabBarActiveTintColor: ICON_ACTIVE,
         tabBarInactiveTintColor: ICON_INACTIVE,
@@ -54,7 +54,7 @@ export default function TechnicianLayout() {
         name="index"
         options={{
           title: 'Trabajos',
-          headerTitle: 'Agenda del Día',
+          headerTitle: 'Agenda del DÃ­a',
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon focused={focused} icon={<ClipboardIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />
           ),
