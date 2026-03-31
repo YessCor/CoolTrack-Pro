@@ -1,13 +1,12 @@
-﻿import { Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
-import { TouchableOpacity, View, Text, Platform } from 'react-native';
-import { HomeIcon, ClipboardIcon, LogOutIcon, AirVentIcon } from '../../components/ui/Icons';
-import { AnimatedTabIcon } from '../../components/ui/AnimatedTabIcon';
+import { TouchableOpacity, Text, View } from 'react-native';
+import { HomeIcon, LayersIcon, LogOutIcon, AirVentIcon } from '../../components/ui/Icons';
+import { MinimalTabIcon } from '../../components/ui/MinimalTabIcon';
 
 const ICON_ACTIVE = '#00B4D8';
-const ICON_INACTIVE = '#6BAED6';
-
-
+const ICON_INACTIVE = '#64748B';
+const BG_DARK = '#0D1B2A';
 
 export default function ClientLayout() {
   const { logout } = useAuth();
@@ -15,37 +14,32 @@ export default function ClientLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#0D1B2A' },
+        headerStyle: { backgroundColor: BG_DARK, height: 90 },
         headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700', fontSize: 17, letterSpacing: 0.3 },
+        headerTitleStyle: { fontWeight: '600' as const, fontSize: 17 },
         headerShadowVisible: false,
+        headerStatusBarHeight: 0,
         tabBarStyle: {
-          backgroundColor: '#0D1B2A',
+          backgroundColor: BG_DARK,
           borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 85 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+          height: 70,
+          paddingBottom: 8,
           paddingTop: 8,
-          elevation: 0,
-          
+          position: 'relative',
         },
         tabBarActiveTintColor: ICON_ACTIVE,
         tabBarInactiveTintColor: ICON_INACTIVE,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.5, marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
         headerLeft: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 8 }}>
-            <AirVentIcon size={20} color="#00B4D8" />
-            <Text style={{ color: '#00B4D8', fontWeight: '800', fontSize: 14, letterSpacing: 1 }}>
-              COOLTRACK
-            </Text>
+          <View style={{ marginLeft: 16, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AirVentIcon size={20} color={ICON_ACTIVE} />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 }}>CoolTrack</Text>
           </View>
         ),
         headerRight: () => (
-          <TouchableOpacity
-            onPress={logout}
-            style={{ marginRight: 16 }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <LogOutIcon size={18} color="#EF4444" />
+          <TouchableOpacity onPress={logout} style={{ marginRight: 16, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239, 68, 68, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
+            <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '600' }}>Cerrar sesión</Text>
+            <LogOutIcon size={14} color="#EF4444" />
           </TouchableOpacity>
         ),
       }}
@@ -56,7 +50,17 @@ export default function ClientLayout() {
           title: 'Inicio',
           headerTitle: 'Mis Solicitudes',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon focused={focused} icon={<HomeIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />
+            <MinimalTabIcon focused={focused} icon={<HomeIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2 : 1.5} />} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="equipment"
+        options={{
+          title: 'Equipos',
+          headerTitle: 'Mis Equipos',
+          tabBarIcon: ({ focused }) => (
+            <MinimalTabIcon focused={focused} icon={<LayersIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2 : 1.5} />} />
           ),
         }}
       />
@@ -67,4 +71,3 @@ export default function ClientLayout() {
     </Tabs>
   );
 }
-
