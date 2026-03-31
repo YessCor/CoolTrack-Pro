@@ -1,93 +1,79 @@
 import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
-import { TouchableOpacity, View, Text, Platform } from 'react-native';
-import { AnimatedTabIcon } from '../../components/ui/AnimatedTabIcon';
+import { TouchableOpacity, Text, View } from 'react-native';
+import { MinimalTabIcon } from '../../components/ui/MinimalTabIcon';
 
 import {
   BarChartIcon, ClipboardIcon, UsersIcon,
-  LogOutIcon, AirVentIcon, FileTextIcon, WrenchIcon,
+  LogOutIcon, AirVentIcon,
 } from '../../components/ui/Icons';
 
-// Colores de la paleta
-const ICON_ACTIVE = '#00B4D8';   // cian brillante
-const ICON_INACTIVE = '#6BAED6'; // azul claro visible
+const ICON_ACTIVE = '#00B4D8';
+const ICON_INACTIVE = '#64748B';
+const BG_DARK = '#0D1B2A';
 
 export default function AdminLayout() {
   const { logout } = useAuth();
 
-  const screenOptions = {
-    headerStyle: { backgroundColor: '#0D1B2A' },
-    headerTintColor: '#fff',
-    headerTitleStyle: { fontWeight: '700' as const, fontSize: 17, letterSpacing: 0.3 },
-    headerShadowVisible: false,
-    tabBarStyle: {
-      backgroundColor: '#0D1B2A',
-      borderTopWidth: 0,
-      height: Platform.OS === 'ios' ? 85 : 68,
-      paddingBottom: Platform.OS === 'ios' ? 24 : 10,
-      paddingTop: 8,
-      elevation: 0,
-      shadowOpacity: 0,
-    },
-    tabBarActiveTintColor: ICON_ACTIVE,
-    tabBarInactiveTintColor: ICON_INACTIVE,
-    tabBarLabelStyle: { fontSize: 10, fontWeight: '600' as const, letterSpacing: 0.5, marginTop: 2 },
-    headerLeft: () => (
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 8 }}>
-        <AirVentIcon size={20} color="#00B4D8" />
-        <Text style={{ color: '#00B4D8', fontWeight: '800', fontSize: 14, letterSpacing: 1 }}>COOLTRACK</Text>
-      </View>
-    ),
-    headerRight: () => (
-      <TouchableOpacity onPress={logout} style={{ marginRight: 16 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <LogOutIcon size={18} color="#EF4444" />
-      </TouchableOpacity>
-    ),
-  };
-
   return (
-    <Tabs screenOptions={screenOptions}>
+    <Tabs
+      screenOptions={{
+        headerStyle: { backgroundColor: BG_DARK, height: 80 },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: '600' as const, fontSize: 17 },
+        headerShadowVisible: false,
+        headerStatusBarHeight: 0,
+        tabBarStyle: {
+          backgroundColor: BG_DARK,
+          borderTopWidth: 0,
+          height: 70,
+          paddingBottom: 8,
+          paddingTop: 8,
+          position: 'relative',
+        },
+        tabBarActiveTintColor: ICON_ACTIVE,
+        tabBarInactiveTintColor: ICON_INACTIVE,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        headerLeft: () => (
+          <View style={{ marginLeft: 16, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AirVentIcon size={20} color={ICON_ACTIVE} />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 }}>CoolTrack</Text>
+          </View>
+        ),
+        headerRight: () => (
+          <TouchableOpacity onPress={logout} style={{ marginRight: 16, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239, 68, 68, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
+            <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '600' }}>Cerrar sesión</Text>
+            <LogOutIcon size={14} color="#EF4444" />
+          </TouchableOpacity>
+        ),
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard', headerTitle: 'Panel General',
-          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<BarChartIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
+          title: 'Dashboard',
+          tabBarIcon: ({ focused }) => <MinimalTabIcon focused={focused} icon={<BarChartIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2 : 1.5} />} />,
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
-          title: 'Órdenes', headerTitle: 'Monitor de Operaciones',
-          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<ClipboardIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
-        }}
-      />
-      <Tabs.Screen
-        name="quotes"
-        options={{
-          title: 'Cotizaciones', headerTitle: 'Gestión Comercial',
-          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<FileTextIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
-        }}
-      />
-      <Tabs.Screen
-        name="technicians"
-        options={{
-          title: 'Staff', headerTitle: 'Directorio de Técnicos',
-          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<WrenchIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
+          title: 'Órdenes',
+          tabBarIcon: ({ focused }) => <MinimalTabIcon focused={focused} icon={<ClipboardIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2 : 1.5} />} />,
         }}
       />
       <Tabs.Screen
         name="clients"
         options={{
-          title: 'Clientes', headerTitle: 'Base de Clientes',
-          tabBarIcon: ({ focused }) => <AnimatedTabIcon focused={focused} icon={<UsersIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2.2 : 1.6} />} />,
+          title: 'Clientes',
+          tabBarIcon: ({ focused }) => <MinimalTabIcon focused={focused} icon={<UsersIcon size={22} color={focused ? ICON_ACTIVE : ICON_INACTIVE} strokeWidth={focused ? 2 : 1.5} />} />,
         }}
       />
-      <Tabs.Screen
-        name="create-technician"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="quotes" options={{ href: null }} />
+      <Tabs.Screen name="technicians" options={{ href: null }} />
+      <Tabs.Screen name="create-technician" options={{ href: null }} />
+      <Tabs.Screen name="client/new" options={{ href: null }} />
+      <Tabs.Screen name="client/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -50,17 +50,16 @@ export function AnimatedTabIcon({ icon, focused }: AnimatedTabIconProps) {
   const bgOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: 52, height: 52 }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 44, height: 44 }}>
       {/* Fondo animado */}
       <Animated.View
         style={{
           position: 'absolute',
-          width: 48,
-          height: 48,
-          borderRadius: 16,
+          width: 40,
+          height: 40,
+          borderRadius: 14,
           backgroundColor: '#1B3A5C',
           opacity: bgOpacity,
-          // Efecto glow en web via boxShadow
           ...(Platform.OS === 'web'
             ? { boxShadow: '0 0 12px 2px rgba(0,180,216,0.35)' }
             : {}),
