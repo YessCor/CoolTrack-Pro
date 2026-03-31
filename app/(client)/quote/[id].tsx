@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { apiCall } from '../../../lib/api';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Button } from '../../../components/ui/Button';
+import { Modal } from '../../../components/ui/Modal';
 import { FileTextIcon, UserIcon, CheckCircleIcon, XIcon } from '../../../components/ui/Icons';
 
 export default function QuoteDetailClient() {
@@ -14,6 +15,8 @@ export default function QuoteDetailClient() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'approved' | 'rejected' | null>(null);
 
   const fetchDetail = async () => {
     try {
@@ -24,33 +27,37 @@ export default function QuoteDetailClient() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchDetail(); }, [id]);
+  useEffect(() => {
+    fetchDetail();
+    const interval = setInterval(fetchDetail, 10000);
+    return () => clearInterval(interval);
+  }, [id]);
 
-  const updateStatus = (newStatus: 'approved' | 'rejected') => {
-    const action = newStatus === 'approved' ? 'aprobar' : 'rechazar';
-    Alert.alert(
-      newStatus === 'approved' ? 'Aprobar cotización' : 'Rechazar cotización',
-      `¿Deseas ${action} esta propuesta de servicio?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: newStatus === 'approved' ? 'Sí, aprobar' : 'Sí, rechazar',
-          style: newStatus === 'rejected' ? 'destructive' : 'default',
-          onPress: async () => {
-            setUpdating(true);
-            try {
-              const { success, error } = await apiCall(`/api/quotes/${id}?user_id=${user?.id}&role=${user?.role}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ status: newStatus }),
-              });
-              if (success) { Alert.alert('Actualizado', `La cotización fue ${newStatus === 'approved' ? 'aprobada' : 'rechazada'}.`); fetchDetail(); }
-              else Alert.alert('Error', error || 'No se pudo actualizar.');
-            } catch { Alert.alert('Error', 'Fallo de conexión.'); }
-            finally { setUpdating(false); }
-          },
-        },
-      ]
-    );
+  const handleAction = (action: 'approved' | 'rejected') => {
+    setPendingAction(action);
+    setShowConfirmModal(true);
+  };
+
+  const confirmAction = async () => {
+    if (!pendingAction) return;
+    setShowConfirmModal(false);
+    setUpdating(true);
+    try {
+      const url = `/api/quotes/${id}?user_id=${user?.id}&role=${user?.role}`;
+      const { success, error } = await apiCall(url, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: pendingAction }),
+      });
+      if (success) {
+        fetchDetail();
+      } else {
+        window.alert('Error: ' + (error || 'No se pudo actualizar'));
+      }
+    } catch (e) {
+      console.error('[QuoteDetailClient] Exception:', e);
+      window.alert('Error de conexión');
+    }
+    finally { setUpdating(false); setPendingAction(null); }
   };
 
   if (loading) return (
@@ -63,6 +70,7 @@ export default function QuoteDetailClient() {
   const { quote, items } = data;
 
   return (
+    <>
     <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ paddingBottom: 40 }}>
       {/* Dark header */}
       <View className="bg-ink px-5 pt-5 pb-10">
@@ -139,20 +147,22 @@ export default function QuoteDetailClient() {
             <Text style={{ color: '#64748b', fontSize: 13, marginTop: 8 }}>Procesando...</Text>
           </View>
         ) : quote.status === 'sent' ? (
-          <View className="gap-3">
+          <View className="gap-3" style={{ width: '100%' }}>
             <Button
               title="Aprobar cotización"
               size="lg"
               icon={<CheckCircleIcon size={18} color="#fff" />}
-              onPress={() => updateStatus('approved')}
+              onPress={() => handleAction('approved')}
               className="w-full"
+              style={{ width: '100%' }}
             />
             <Button
               title="Rechazar"
               variant="outline"
               icon={<XIcon size={18} color="#0F4C75" />}
-              onPress={() => updateStatus('rejected')}
+              onPress={() => handleAction('rejected')}
               className="w-full"
+              style={{ width: '100%' }}
             />
           </View>
         ) : (
@@ -176,5 +186,24 @@ export default function QuoteDetailClient() {
         <Button title="Volver" variant="ghost" onPress={() => router.back()} className="w-full" />
       </View>
     </ScrollView>
+
+    <Modal
+      visible={showConfirmModal}
+      onClose={() => setShowConfirmModal(false)}
+      title={pendingAction === 'approved' ? 'Aprobar cotización' : 'Rechazar cotización'}
+      position="center"
+      primaryAction={{
+        label: pendingAction === 'approved' ? 'Sí, aprobar' : 'Sí, rechazar',
+        onPress: confirmAction,
+      }}
+    >
+      <Text style={{ color: '#64748b', fontSize: 15, lineHeight: 22 }}>
+        ¿Estás seguro de que deseas {pendingAction === 'approved' ? 'aprobar' : 'rechazar'} esta propuesta de servicio?
+      </Text>
+      <Text style={{ color: '#0D1B2A', fontSize: 16, fontWeight: '600', marginTop: 12 }}>
+        Total: ${Number(quote.total).toFixed(2)}
+      </Text>
+    </Modal>
+    </>
   );
 }

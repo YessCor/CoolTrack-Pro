@@ -74,10 +74,6 @@ export default function JobDetail() {
   useEffect(() => { fetchData(); }, [id]);
 
   const updateStatus = async (newStatus: OrderStatus) => {
-    if ((newStatus === 'in_progress' || newStatus === 'completed') && quoteStatus !== 'approved') {
-      Alert.alert('Bloqueado', 'No puedes continuar sin una cotización aprobada por el cliente.');
-      return;
-    }
     setUpdating(true);
     try {
       const res = await fetch(`/api/orders?id=${id}`, {
@@ -107,9 +103,6 @@ export default function JobDetail() {
   const currentStatus = (order.status ?? ORDER_STATUS.PENDING) as OrderStatus;
   const nextStatus = TECHNICIAN_NEXT_STATUS[currentStatus];
   const stepConfig = nextStatus ? STEP_CONFIG[currentStatus] : null;
-  const isWorkBlocked = (nextStatus === 'in_progress' || nextStatus === 'completed') && quoteStatus !== 'approved';
-  const quoteApproved = quoteStatus === 'approved';
-  const showQuoteAlert = currentStatus === ORDER_STATUS.ACCEPTED || currentStatus === ORDER_STATUS.IN_TRANSIT;
 
   return (
     <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ paddingBottom: 40 }}>
@@ -127,27 +120,6 @@ export default function JobDetail() {
       </View>
 
       <View style={{ marginTop: -20, marginHorizontal: 16, gap: 12 }}>
-
-        {/* Quote alert banner */}
-        {showQuoteAlert && (
-          <View
-            className="rounded-2xl px-4 py-3.5 flex-row items-center gap-3"
-            style={{ backgroundColor: quoteApproved ? '#ECFDF5' : '#FFFBEB', borderWidth: 1, borderColor: quoteApproved ? '#6EE7B7' : '#FCD34D' }}
-          >
-            {quoteApproved
-              ? <CheckCircleIcon size={20} color="#059669" />
-              : <AlertTriangleIcon size={20} color="#D97706" />
-            }
-            <View className="flex-1">
-              <Text style={{ fontWeight: '700', fontSize: 13, color: quoteApproved ? '#065F46' : '#92400E' }}>
-                {quoteApproved ? 'Cotización aprobada' : 'Cotización pendiente'}
-              </Text>
-              <Text style={{ fontSize: 12, color: quoteApproved ? '#047857' : '#B45309', marginTop: 1 }}>
-                {quoteApproved ? 'Puedes proceder con el inicio del trabajo.' : 'Espera a que el cliente apruebe tu propuesta.'}
-              </Text>
-            </View>
-          </View>
-        )}
 
         {/* Client & address */}
         <View className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden">
@@ -261,17 +233,8 @@ export default function JobDetail() {
                 {/* Next action button */}
                 {stepConfig && nextStatus && (
                   <View className="gap-2">
-                    {isWorkBlocked && (
-                      <View className="bg-amber-50 rounded-xl px-3 py-2 flex-row items-center gap-2 border border-amber-100">
-                        <AlertTriangleIcon size={14} color="#D97706" />
-                        <Text style={{ color: '#B45309', fontSize: 12, fontWeight: '600', flex: 1 }}>
-                          Requiere cotización aprobada para continuar.
-                        </Text>
-                      </View>
-                    )}
                     <Button
                       title={stepConfig.label}
-                      disabled={isWorkBlocked}
                       size="lg"
                       onPress={() => updateStatus(nextStatus)}
                       className="w-full"

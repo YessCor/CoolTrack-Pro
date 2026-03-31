@@ -67,15 +67,38 @@ export async function PATCH(request: Request, ctx?: any) {
     const user_id = url.searchParams.get('user_id');
     const role = url.searchParams.get('role');
 
+    console.log('[PATCH /api/quotes/[id]] Request received');
+    console.log('[PATCH /api/quotes/[id]] URL:', url.toString());
+    console.log('[PATCH /api/quotes/[id]] Extracted id:', id);
+    console.log('[PATCH /api/quotes/[id]] user_id:', user_id, 'role:', role);
+
     if (!id) return createErrorResponse('ID de cotización no encontrado en la URL', 400);
     if (!user_id || !role) {
+      console.log('[PATCH /api/quotes/[id]] Unauthorized - missing user_id or role');
       return createErrorResponse('Unauthorized', 401);
     }
 
+    const quoteCheck = await sql`
+      SELECT client_id, status FROM quotes WHERE id = ${id}::uuid
+    `;
+
+    if (quoteCheck.length === 0) {
+      console.log('[PATCH /api/quotes/[id]] Quote not found');
+      return createErrorResponse('Cotización no encontrada', 404);
+    }
+
+    if (role === 'client' && quoteCheck[0].client_id !== user_id) {
+      console.log('[PATCH /api/quotes/[id]] Forbidden - client does not own quote');
+      return createErrorResponse('No tienes permiso para modificar esta cotización', 403);
+    }
+
     const { status } = await request.json();
+    console.log('[PATCH /api/quotes/[id]] New status:', status);
+
     const validStatuses = ['draft', 'sent', 'approved', 'rejected', 'expired'];
 
     if (!status || !validStatuses.includes(status)) {
+      console.log('[PATCH /api/quotes/[id]] Invalid status:', status);
       return createErrorResponse('Estado inválido', 400);
     }
 
@@ -87,8 +110,11 @@ export async function PATCH(request: Request, ctx?: any) {
     `;
 
     if (updated.length === 0) {
+      console.log('[PATCH /api/quotes/[id]] Update returned no rows');
       return createErrorResponse('Cotización no encontrada', 404);
     }
+
+    console.log('[PATCH /api/quotes/[id]] Success - quote updated to:', status);
 
     // IMMUTABLE ENHANCEMENT
     const enhancedQuote = enhanceQuote(updated[0] as any);

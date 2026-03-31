@@ -79,6 +79,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="equipment" options={{ href: null }} />
       <Tabs.Screen name="equipment/new" options={{ href: null }} />
       <Tabs.Screen name="equipment/[id]" options={{ href: null }} />
+      <Tabs.Screen name="order/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

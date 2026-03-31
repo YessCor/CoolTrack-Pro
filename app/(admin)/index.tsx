@@ -3,7 +3,7 @@ import { View, Text, ScrollView, RefreshControl, TouchableOpacity, StyleSheet } 
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { BarChartIcon, ClipboardIcon, AlertTriangleIcon, CheckCircleIcon, MapPinIcon, UsersIcon, WrenchIcon, FileTextIcon } from '../../components/ui/Icons';
-import { calculateKPIs, KPIData, TimeRange, formatCurrency } from '../../lib/services/kpi-service';
+import { apiCall } from '../../lib/api';
 import { SyncStatus } from '../../components/SyncStatus';
 
 function StatCard({ label, value, icon, accent, sub }: { label: string; value: number | string; icon: React.ReactNode; accent: string; sub?: string }) {
@@ -19,55 +19,51 @@ function StatCard({ label, value, icon, accent, sub }: { label: string; value: n
   );
 }
 
-function TimeRangeSelector({ selected, onSelect }: { selected: TimeRange; onSelect: (range: TimeRange) => void }) {
-  const ranges: TimeRange[] = ['today', 'week', 'month', 'year'];
-  const labels = { today: 'Hoy', week: 'Semana', month: 'Mes', year: 'Año' };
-  const colors = { today: '#0F4C75', week: '#1B6CA8', month: '#2E86AB', year: '#00B4D8' };
+interface DashboardStats {
+  totalOrders: number;
+  activeOrders: number;
+  completedOrders: number;
+  pendingQuotes: number;
+  totalRevenue: number;
+  averageRating: number;
+  totalTechnicians: number;
+  totalClients: number;
+}
 
-  return (
-    <View style={styles.rangeSelector}>
-      {ranges.map(range => (
-        <TouchableOpacity
-          key={range}
-          style={[
-            styles.rangeButton,
-            selected === range && { backgroundColor: colors[range] }
-          ]}
-          onPress={() => onSelect(range)}
-        >
-          <Text style={[
-            styles.rangeButtonText,
-            selected === range && { color: '#fff' }
-          ]}>
-            {labels[range]}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(amount);
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { user } = useAuth();
-  const [stats, setStats] = useState<KPIData | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<TimeRange>('month');
 
   const fetchStats = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      const data = await calculateKPIs(timeRange);
-      setStats(data);
+      const res = await apiCall<DashboardStats>(`/api/admin/dashboard?user_id=${user.id}&role=admin`);
+      if (res.success && res.data) {
+        setStats(res.data);
+      }
     } catch (error) {
-      console.error('Error fetching KPIs:', error);
+      console.error('Error fetching dashboard:', error);
     } finally {
       setLoading(false);
     }
-  }, [timeRange]);
+  }, [user]);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (user?.id) {
+      fetchStats();
+    }
+    const interval = setInterval(fetchStats, 10000);
+    return () => clearInterval(interval);
+  }, [fetchStats, user]);
 
   return (
     <ScrollView
@@ -90,8 +86,6 @@ export default function AdminDashboard() {
         <SyncStatus />
       </View>
 
-      <TimeRangeSelector selected={timeRange} onSelect={setTimeRange} />
-
       <View style={styles.welcomeStrip}>
         <View>
           <Text style={styles.welcomeSubLabel}>MÉTRICAS</Text>
@@ -107,14 +101,14 @@ export default function AdminDashboard() {
           <View style={styles.statsGrid}>
             <StatCard
               label="Completados"
-              value={stats.servicesCompleted}
+              value={stats.completedOrders}
               icon={<CheckCircleIcon size={22} color="#10B981" />}
               accent="#10B981"
-              sub={`${stats.preventiveCount} preventivos, ${stats.correctiveCount} correctivos`}
+              sub="Órdenes completadas"
             />
             <StatCard
               label="Activos"
-              value={stats.inProgressOrders}
+              value={stats.activeOrders}
               icon={<WrenchIcon size={22} color="#F59E0B" />}
               accent="#F59E0B"
               sub="En progreso"
@@ -124,17 +118,17 @@ export default function AdminDashboard() {
           <View style={styles.statsGrid}>
             <StatCard
               label="Pendientes"
-              value={stats.pendingOrders}
+              value={stats.totalOrders - stats.activeOrders - stats.completedOrders}
               icon={<ClipboardIcon size={22} color="#1B6CA8" />}
               accent="#1B6CA8"
               sub="Sin asignar"
             />
             <StatCard
-              label="Técnicos activos"
-              value={stats.activeTechnicians}
+              label="Técnicos"
+              value={stats.totalTechnicians}
               icon={<UsersIcon size={22} color="#7C3AED" />}
               accent="#7C3AED"
-              sub="En servicio"
+              sub="Registrados"
             />
           </View>
 
@@ -144,16 +138,33 @@ export default function AdminDashboard() {
               value={formatCurrency(stats.totalRevenue)}
               icon={<FileTextIcon size={22} color="#0F4C75" />}
               accent="#0F4C75"
-              sub="Cotizaciones aprobadas"
+              sub="Total completado"
             />
             <View style={[styles.statCard, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
               <View style={[styles.statIcon, { backgroundColor: '#FDE68A' }]}>
                 <AlertTriangleIcon size={22} color="#F59E0B" />
               </View>
-              <Text style={styles.statValue}>{(stats.pendingOrders + stats.inProgressOrders)}</Text>
+              <Text style={styles.statValue}>{(stats.totalOrders - stats.completedOrders)}</Text>
               <Text style={styles.statLabel}>Órdenes activas</Text>
               <Text style={styles.statSub}>Requieren atención</Text>
             </View>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <StatCard
+              label="Clientes"
+              value={stats.totalClients}
+              icon={<UsersIcon size={22} color="#0F4C75" />}
+              accent="#0F4C75"
+              sub="Registrados"
+            />
+            <StatCard
+              label="Cotizaciones"
+              value={stats.pendingQuotes}
+              icon={<FileTextIcon size={22} color="#F59E0B" />}
+              accent="#F59E0B"
+              sub="Pendientes"
+            />
           </View>
         </>
       ) : (

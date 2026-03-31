@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator }
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeftIcon, AirVentIcon, ChevronRightIcon, MapPinIcon, PhoneIcon, MailIcon, ClipboardIcon, WrenchIcon } from '../../../components/ui/Icons';
 import { useAuth } from '../../../context/AuthContext';
+import { StatusBadge } from '../../../components/ui/StatusBadge';
 
 const EQUIPMENT_TYPE_LABELS: Record<string, string> = {
   split: 'Aire de ventana',
@@ -14,38 +15,70 @@ const EQUIPMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function ClientDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
   const { user } = useAuth();
   
   const [client, setClient] = useState<any>(null);
   const [equipment, setEquipment] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'equipment' | 'orders'>('equipment');
 
   useEffect(() => {
     if (id) loadData();
   }, [id]);
 
   const loadData = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !id) return;
     setLoading(true);
     try {
-      const [clientRes, equipRes] = await Promise.all([
-        fetch(`/api/admin/clients?user_id=${user.id}&role=admin`),
-        fetch(`/api/admin/equipment?user_id=${user.id}&role=admin&client_id=${id}`),
-      ]);
+      // Fetch client data
+      const clientRes = await fetch(`/api/admin/clients?user_id=${user.id}&role=admin`);
+      const clientData = await clientRes.json();
       
-      const [clientData, equipData] = await Promise.all([clientRes.json(), equipRes.json()]);
-      
-      if (clientData.success) {
-        const found = clientData.clients?.find((c: any) => c.id === id);
-        setClient(found);
+      if (clientData.success && clientData.clients) {
+        const found = clientData.clients.find((c: any) => c.id === id);
+        setClient(found || null);
       }
-      
-      if (equipData.success) {
-        setEquipment(equipData.equipment || []);
+
+      // Fetch equipment data
+      try {
+        const equipRes = await fetch(`/api/admin/equipment?user_id=${user.id}&role=admin&client_id=${id}`);
+        if (equipRes.ok) {
+          const equipData = await equipRes.json();
+          if (equipData.success) {
+            setEquipment(equipData.equipment || []);
+          }
+        } else {
+          setEquipment([]);
+        }
+      } catch (equipError) {
+        console.warn('Error fetching equipment:', equipError);
+        setEquipment([]);
       }
-    } catch (e) { console.error(e); }
+
+      // Fetch orders data
+      try {
+        const ordersRes = await fetch(`/api/orders?user_id=${user.id}&role=admin`);
+        if (ordersRes.ok) {
+          const ordersData = await ordersRes.json();
+          if (ordersData.success && ordersData.orders) {
+            const clientOrders = ordersData.orders.filter((o: any) => o.client_id === id);
+            setOrders(clientOrders);
+          }
+        } else {
+          setOrders([]);
+        }
+      } catch (ordersError) {
+        console.warn('Error fetching orders:', ordersError);
+        setOrders([]);
+      }
+    } catch (e) { 
+      console.error('Error loading client data:', e); 
+      setClient(null);
+    }
     finally { setLoading(false); }
   };
 
@@ -93,6 +126,35 @@ export default function ClientDetailScreen() {
     );
   };
 
+  const renderOrder = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.equipmentCard}
+      onPress={() => router.push({ pathname: '/(admin)/orders', params: { order_id: item.id } } as any)}
+    >
+      <View style={styles.equipmentRow}>
+        <View style={styles.equipmentIcon}>
+          <ClipboardIcon size={22} color="#0F4C75" />
+        </View>
+        <View style={styles.equipmentInfo}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={styles.equipmentName}>Orden #{item.order_number}</Text>
+            <StatusBadge status={item.status} />
+          </View>
+          <Text style={styles.equipmentType}>{item.service_type}</Text>
+          <Text style={styles.locationText} numberOfLines={1}>{item.description}</Text>
+        </View>
+      </View>
+      <View style={styles.serviceStats}>
+        <Text style={styles.serviceStatText}>
+          {item.technician_name || 'Sin técnico asignado'}
+        </Text>
+        <Text style={styles.lastService}>
+          {new Date(item.created_at).toLocaleDateString('es-CO')}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -103,11 +165,35 @@ export default function ClientDetailScreen() {
 
   if (!client) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Cliente no encontrado</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeftIcon size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Detalle del Cliente</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Cliente no encontrado</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 8 }}>
+            Buscando ID: {id}
+          </Text>
+          <TouchableOpacity 
+            onPress={loadData} 
+            style={{ marginTop: 16, backgroundColor: '#0F4C75', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
+
+  const data = activeTab === 'equipment' ? equipment : orders;
+  const renderItem = activeTab === 'equipment' ? renderEquipment : renderOrder;
+  const emptyText = activeTab === 'equipment' 
+    ? 'Este cliente no tiene equipos registrados' 
+    : 'Este cliente no tiene órdenes registradas';
 
   return (
     <View style={styles.container}>
@@ -120,9 +206,9 @@ export default function ClientDetailScreen() {
       </View>
 
       <FlatList
-        data={equipment}
+        data={data}
         keyExtractor={item => item.id}
-        renderItem={renderEquipment}
+        renderItem={renderItem}
         contentContainerStyle={{ padding: 16, gap: 12 }}
         ListHeaderComponent={
           <>
@@ -164,19 +250,43 @@ export default function ClientDetailScreen() {
                 <View style={styles.clientStat}>
                   <WrenchIcon size={16} color="#0F4C75" />
                   <Text style={styles.clientStatText}>
-                    {equipment.reduce((acc, e) => acc + (e.service_history?.length || 0), 0)} servicios
+                    {orders.length} órdenes
                   </Text>
                 </View>
               </View>
             </View>
-            
-            <Text style={styles.sectionTitle}>Equipos del Cliente</Text>
+
+            {/* Tabs */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'equipment' && styles.tabActive]}
+                onPress={() => setActiveTab('equipment')}
+              >
+                <AirVentIcon size={16} color={activeTab === 'equipment' ? '#fff' : '#0F4C75'} />
+                <Text style={[styles.tabText, activeTab === 'equipment' && styles.tabTextActive]}>
+                  Equipos ({equipment.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'orders' && styles.tabActive]}
+                onPress={() => setActiveTab('orders')}
+              >
+                <ClipboardIcon size={16} color={activeTab === 'orders' ? '#fff' : '#0F4C75'} />
+                <Text style={[styles.tabText, activeTab === 'orders' && styles.tabTextActive]}>
+                  Órdenes ({orders.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
           </>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <AirVentIcon size={40} color="#CBD5E1" />
-            <Text style={styles.emptyText}>Este cliente no tiene equipos registrados</Text>
+            {activeTab === 'equipment' ? (
+              <AirVentIcon size={40} color="#CBD5E1" />
+            ) : (
+              <ClipboardIcon size={40} color="#CBD5E1" />
+            )}
+            <Text style={styles.emptyText}>{emptyText}</Text>
           </View>
         }
       />
@@ -214,7 +324,35 @@ const styles = StyleSheet.create({
   clientStats: { flexDirection: 'row', gap: 20, marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
   clientStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   clientStatText: { fontSize: 13, fontWeight: '600', color: '#0D1B2A' },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#64748b', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: '#0F4C75',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F4C75',
+  },
+  tabTextActive: {
+    color: '#fff',
+  },
   equipmentCard: {
     backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0',
   },

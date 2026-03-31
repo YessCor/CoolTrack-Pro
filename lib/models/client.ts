@@ -20,6 +20,7 @@ export type Client = z.infer<typeof ClientSchema>;
 
 export interface ClientWithStats extends Client {
   equipment_count?: number;
+  total_orders?: number;
   pending_orders?: number;
 }
 

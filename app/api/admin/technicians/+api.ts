@@ -9,7 +9,6 @@ export async function POST(request: Request) {
       return Response.json({ success: false, error: 'Datos incompletos' }, { status: 400 });
     }
 
-    // Verificar que quien crea es Admin
     const adminCheck = await sql`SELECT role FROM users WHERE id = ${admin_id}`;
     if (adminCheck.length === 0 || adminCheck[0].role !== 'admin') {
       return Response.json({ success: false, error: 'No autorizado' }, { status: 403 });
@@ -36,13 +35,23 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  // Obtener lista completa de técnicos
   try {
     const techs = await sql`
-      SELECT id, name, email, phone, is_active, created_at 
-      FROM users 
-      WHERE role = 'technician'
-      ORDER BY created_at DESC
+      SELECT 
+        u.id, 
+        u.name, 
+        u.email, 
+        u.phone, 
+        u.is_active, 
+        u.created_at,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM service_orders o 
+          WHERE o.technician_id = u.id 
+          AND o.status IN ('assigned', 'accepted', 'in_transit', 'in_progress')
+        ) THEN true ELSE false END as is_busy
+      FROM users u
+      WHERE u.role = 'technician'
+      ORDER BY u.created_at DESC
     `;
     return Response.json({ success: true, technicians: techs });
   } catch (error: any) {

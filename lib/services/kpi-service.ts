@@ -1,9 +1,23 @@
-import { getAllWorkOrders } from '../repositories/work-order-repository';
-import { getAllClients } from '../repositories/client-repository';
-import { getAllQuotes } from '../repositories/quote-repository';
+import { apiCall } from '../api';
 import { ORDER_STATUS } from '../order-status';
 
 export type TimeRange = 'today' | 'week' | 'month' | 'year';
+
+interface Order {
+  id: string;
+  status: string;
+  service_type: string;
+  completed_at?: string;
+  updated_at?: string;
+  technician_id?: string;
+}
+
+interface Quote {
+  id: string;
+  status: string;
+  email_sent_at?: string;
+  total?: number;
+}
 
 export interface KPIData {
   servicesCompleted: number;
@@ -51,23 +65,32 @@ function getDateRange(range: TimeRange): { start: Date; end: Date } {
   return { start, end };
 }
 
-export async function calculateKPIs(range: TimeRange): Promise<KPIData> {
-  const [orders, clients, quotes] = await Promise.all([
-    getAllWorkOrders(),
-    getAllClients(),
-    getAllQuotes(),
+export async function calculateKPIs(range: TimeRange, userId: string, role: string): Promise<KPIData> {
+  const [ordersRes, clientsRes, quotesRes] = await Promise.all([
+    apiCall(`/api/admin/orders?user_id=${userId}&role=${role}`),
+    apiCall(`/api/admin/clients?user_id=${userId}&role=${role}`),
+    apiCall(`/api/admin/quotes?user_id=${userId}&role=${role}`),
   ]);
+
+  const orders: Order[] = ordersRes.success && ordersRes.data ? (ordersRes.data as any).orders || [] : [];
+  const quotes: Quote[] = quotesRes.success && quotesRes.data ? (quotesRes.data as any).quotes || [] : [];
 
   const { start, end } = getDateRange(range);
 
   const completedOrders = orders.filter(o => {
-    if (o.status !== ORDER_STATUS.COMPLETED || !o.completed_at) return false;
-    const completedDate = new Date(o.completed_at);
+    if (o.status !== ORDER_STATUS.COMPLETED) return false;
+    const dateStr = o.completed_at || o.updated_at;
+    if (!dateStr) return false;
+    const completedDate = new Date(dateStr);
     return completedDate >= start && completedDate <= end;
   });
 
-  const preventiveCount = completedOrders.filter(o => o.service_type === 'preventivo').length;
-  const correctiveCount = completedOrders.filter(o => o.service_type === 'correctivo').length;
+  const preventiveCount = completedOrders.filter(o => 
+    o.service_type?.toLowerCase().includes('preventivo') || o.service_type?.toLowerCase().includes('mantenimiento')
+  ).length;
+  const correctiveCount = completedOrders.filter(o => 
+    o.service_type?.toLowerCase().includes('correctivo')
+  ).length;
 
   const pendingOrders = orders.filter(o => 
     o.status === ORDER_STATUS.PENDING || o.status === ORDER_STATUS.ASSIGNED
