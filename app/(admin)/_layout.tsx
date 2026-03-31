@@ -70,11 +70,12 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen name="quotes" options={{ href: null }} />
+      <Tabs.Screen name="quote/new" options={{ href: null }} />
       <Tabs.Screen name="technicians" options={{ href: null }} />
       <Tabs.Screen name="create-technician" options={{ href: null }} />
       <Tabs.Screen name="client/new" options={{ href: null }} />
       <Tabs.Screen name="client/[id]" options={{ href: null }} />
-
+      <Tabs.Screen name="client/equipment/[id]" options={{ href: null }} />
     </Tabs>
   );
 }
